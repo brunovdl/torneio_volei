@@ -71,6 +71,129 @@ svg {
   line-height: 1.7;
   text-align: center;
 }
+
+/* Edit and Leaderboard styles */
+.editable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.editable:hover {
+  fill: #fff;
+  text-decoration: underline;
+  filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+}
+
+.leaderboard-container {
+  max-width: 720px;
+  margin: 40px auto 20px;
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 10px;
+  padding: 24px;
+}
+.leaderboard-container h2 {
+  font-size: 1.4rem;
+  color: #fff;
+  margin-bottom: 20px;
+  text-align: center;
+  font-family: 'Syne', sans-serif;
+}
+.team-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #1e2d40;
+}
+.team-row:last-child {
+  border-bottom: none;
+}
+.team-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #e2e8f0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  width: 250px;
+  padding: 6px;
+  border-radius: 4px;
+}
+.team-name-input:focus {
+  border: 1px solid #3b82f6;
+  outline: none;
+  background: #1e2d40;
+}
+.win-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.win-btn {
+  background: #1e2d40;
+  border: 1px solid #374151;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.win-btn:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+.win-btn.minus:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+.win-count {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f5a623;
+  min-width: 30px;
+  text-align: center;
+}
+.add-btn {
+  display: block;
+  margin: 24px auto 0;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+.add-btn:hover {
+  background: #2563eb;
+}
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-left: 10px;
+  transition: color 0.2s;
+}
+.delete-btn:hover {
+  color: #ef4444;
+}
+
 </style>
 </head>
 <body>
@@ -81,7 +204,7 @@ svg {
 </header>
 
 <div class="flow-wrap">
-<svg viewBox="0 0 1120 1180" width="1120" height="1180" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 1120 1200" width="1120" height="1200" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <!-- Gradients -->
   <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="0">
@@ -162,11 +285,11 @@ svg {
 <!-- teams -->
 <circle cx="110" cy="127" r="10" fill="rgba(59,130,246,0.3)"/>
 <text x="110" y="131" font-size="9" fill="#93c5fd" text-anchor="middle" font-weight="700">T1</text>
-<text x="128" y="131" font-size="12" fill="#e2e8f0" font-weight="600">Time 1</text>
+<text x="128" y="131" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 1</text>
 <text x="190" y="145" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
 <circle cx="110" cy="158" r="10" fill="rgba(239,68,68,0.25)"/>
 <text x="110" y="162" font-size="9" fill="#fca5a5" text-anchor="middle" font-weight="700">T2</text>
-<text x="128" y="162" font-size="12" fill="#e2e8f0" font-weight="600">Time 2</text>
+<text x="128" y="162" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 2</text>
 
 <!-- ===== JOGO 2 — T3 x T4 ===== -->
 <g filter="url(#shadow)">
@@ -177,11 +300,11 @@ svg {
 <text x="930" y="104" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 2</text>
 <circle cx="850" cy="127" r="10" fill="rgba(34,197,94,0.25)"/>
 <text x="850" y="131" font-size="9" fill="#86efac" text-anchor="middle" font-weight="700">T3</text>
-<text x="868" y="131" font-size="12" fill="#e2e8f0" font-weight="600">Time 3</text>
+<text x="868" y="131" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 3</text>
 <text x="930" y="145" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
 <circle cx="850" cy="158" r="10" fill="rgba(168,85,247,0.25)"/>
 <text x="850" y="162" font-size="9" fill="#d8b4fe" text-anchor="middle" font-weight="700">T4</text>
-<text x="868" y="162" font-size="12" fill="#e2e8f0" font-weight="600">Time 4</text>
+<text x="868" y="162" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 4</text>
 
 <!-- ===== TIME 5 chapéu ===== -->
 <g filter="url(#shadow)">
@@ -192,7 +315,7 @@ svg {
 <text x="560" y="104" font-size="9" fill="#86efac" font-weight="700" text-anchor="middle" letter-spacing="1">CHAPÉU — AGUARDA</text>
 <circle cx="480" cy="145" r="12" fill="rgba(245,166,35,0.2)"/>
 <text x="480" y="150" font-size="10" fill="#fcd34d" text-anchor="middle" font-weight="700">T5</text>
-<text x="500" y="150" font-size="13" fill="#e2e8f0" font-weight="600">Time 5</text>
+<text x="500" y="150" font-size="13" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 5</text>
 <text x="560" y="168" font-size="9" fill="#4b5563" text-anchor="middle">entra diretamente no Jogo 3</text>
 
 <!-- ============================================================ -->
@@ -227,11 +350,11 @@ svg {
 <rect x="280" y="348" width="220" height="24" rx="10" fill="url(#gBlue)"/>
 <rect x="280" y="360" width="220" height="12" fill="url(#gBlue)"/>
 <text x="390" y="364" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 3 · CHAVE VENCEDORES</text>
-<text x="310" y="388" font-size="10" fill="#93c5fd" font-weight="600">Vencedor J1</text>
+<text x="310" y="388" font-size="10" fill="#93c5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J1</text>
 <text x="390" y="402" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
 <circle cx="300" cy="415" r="10" fill="rgba(245,166,35,0.2)"/>
 <text x="300" y="419" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="700">T5</text>
-<text x="316" y="419" font-size="10" fill="#e2e8f0" font-weight="600">Time 5</text>
+<text x="316" y="419" font-size="10" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 5</text>
 
 <!-- JOGO 4 — Perd J1 x Perd J2 (losers) -->
 <g filter="url(#shadow)">
@@ -240,9 +363,9 @@ svg {
 <rect x="450" y="448" width="220" height="24" rx="10" fill="url(#gRed)"/>
 <rect x="450" y="460" width="220" height="12" fill="url(#gRed)"/>
 <text x="560" y="464" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 4 · REPESCAGEM</text>
-<text x="476" y="488" font-size="10" fill="#fca5a5" font-weight="600">Perdedor J1</text>
+<text x="476" y="488" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J1</text>
 <text x="560" y="502" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
-<text x="476" y="516" font-size="10" fill="#fca5a5" font-weight="600">Perdedor J2</text>
+<text x="476" y="516" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J2</text>
 
 <!-- ============================================================ -->
 <!-- ARROWS R2 → R3 -->
@@ -273,9 +396,9 @@ svg {
 <rect x="560" y="608" width="220" height="24" rx="10" fill="url(#gBlue)"/>
 <rect x="560" y="620" width="220" height="12" fill="url(#gBlue)"/>
 <text x="670" y="624" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 5 · FINAL VENCEDORES</text>
-<text x="586" y="648" font-size="10" fill="#86efac" font-weight="600">Vencedor J2</text>
+<text x="586" y="648" font-size="10" fill="#86efac" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J2</text>
 <text x="670" y="662" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
-<text x="586" y="676" font-size="10" fill="#93c5fd" font-weight="600">Vencedor J3</text>
+<text x="586" y="676" font-size="10" fill="#93c5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J3</text>
 
 <!-- JOGO 6 — Venc J4 x Perd J3 (repesca) -->
 <g filter="url(#shadow)">
@@ -284,9 +407,9 @@ svg {
 <rect x="200" y="708" width="220" height="24" rx="10" fill="url(#gRed)"/>
 <rect x="200" y="720" width="220" height="12" fill="url(#gRed)"/>
 <text x="310" y="724" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 6 · REPESCAGEM</text>
-<text x="226" y="748" font-size="10" fill="#fca5a5" font-weight="600">Vencedor J4</text>
+<text x="226" y="748" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J4</text>
 <text x="310" y="762" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
-<text x="226" y="776" font-size="10" fill="#fca5a5" font-weight="600">Perdedor J3</text>
+<text x="226" y="776" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J3</text>
 
 <!-- ============================================================ -->
 <!-- ARROWS R3 → SEMI -->
@@ -317,9 +440,9 @@ svg {
 <rect x="390" y="858" width="220" height="24" rx="10" fill="url(#gPurple)"/>
 <rect x="390" y="870" width="220" height="12" fill="url(#gPurple)"/>
 <text x="500" y="874" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 7 · SEMIFINAL REPESCAGEM</text>
-<text x="416" y="898" font-size="10" fill="#c4b5fd" font-weight="600">Vencedor J6</text>
+<text x="416" y="898" font-size="10" fill="#c4b5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J6</text>
 <text x="500" y="912" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
-<text x="416" y="926" font-size="10" fill="#c4b5fd" font-weight="600">Perdedor J5</text>
+<text x="416" y="926" font-size="10" fill="#c4b5fd" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J5</text>
 
 <!-- J7 loser → 3rd -->
 <path d="M 390 910 L 330 910 L 330 965" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)"/>
@@ -342,10 +465,10 @@ svg {
 <rect x="560" y="1012" width="260" height="12" fill="url(#gGold)"/>
 <text x="690" y="1015" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="2">🏆 JOGO 8 · GRANDE FINAL</text>
 <rect x="568" y="1030" width="110" height="20" rx="5" fill="rgba(245,166,35,0.15)" stroke="rgba(245,166,35,0.4)" stroke-width="1"/>
-<text x="623" y="1044" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="700">★ Invicto (V. J5)</text>
+<text x="623" y="1044" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="700" class="editable" onclick="editSlot(this)">★ Invicto (V. J5)</text>
 <text x="690" y="1060" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
 <rect x="702" y="1065" width="110" height="20" rx="5" fill="rgba(168,85,247,0.1)" stroke="rgba(168,85,247,0.3)" stroke-width="1"/>
-<text x="757" y="1079" font-size="9" fill="#c4b5fd" text-anchor="middle" font-weight="700">Repescagem (V. J7)</text>
+<text x="757" y="1079" font-size="9" fill="#c4b5fd" text-anchor="middle" font-weight="700" class="editable" onclick="editSlot(this)">Repescagem (V. J7)</text>
 
 <!-- J8 result branches -->
 <!-- Invicto wins = CHAMPION -->
@@ -365,9 +488,9 @@ svg {
 <rect x="830" y="1098" width="240" height="22" rx="10" fill="rgba(245,166,35,0.2)"/>
 <rect x="830" y="1108" width="240" height="12" fill="rgba(245,166,35,0.2)"/>
 <text x="950" y="1113" font-size="8.5" fill="#fcd34d" font-weight="700" text-anchor="middle" letter-spacing="1.5">JOGO 9 — DESEMPATE (se necessário)</text>
-<text x="950" y="1140" font-size="9" fill="#9ca3af" text-anchor="middle">Time Invicto (1ª derrota)</text>
-<text x="950" y="1153" font-size="8" fill="#6b7280" text-anchor="middle">VS  Time Repescagem</text>
-<text x="950" y="1166" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="600">→ Vencedor = 🏆 CAMPEÃO ABSOLUTO</text>
+<text x="950" y="1140" font-size="9" fill="#9ca3af" text-anchor="middle" class="editable" onclick="editSlot(this)">Time Invicto (1ª derrota)</text>
+<text x="950" y="1153" font-size="8" fill="#6b7280" text-anchor="middle">VS</text>\n<text x="950" y="1166" font-size="9" fill="#c4b5fd" text-anchor="middle" class="editable" onclick="editSlot(this)">Time Repescagem</text>
+<text x="950" y="1182" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="600">→ Vencedor = 🏆 CAMPEÃO ABSOLUTO</text>
 
 <!-- ============================================================ -->
 <!-- ROUND DIVIDERS -->
@@ -394,10 +517,123 @@ svg {
   <span><span class="lbox" style="background:#374151; border:1px solid #4b5563;"></span>Eliminado</span>
 </div>
 
+
+<div class="leaderboard-container">
+  <h2>🏆 Tabela de Vitórias</h2>
+  <div id="teams-list"></div>
+  <button class="add-btn" onclick="addTeam()">+ Adicionar Time</button>
+</div>
+
 <div class="info-box">
   <strong>📌 Regra de ouro:</strong> Nenhum time é eliminado na <em>primeira</em> derrota — apenas na segunda.<br>
   O Jogo 9 só acontece se o time da repescagem vencer o Jogo 8, zerando a vantagem do invicto.
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const editableTexts = document.querySelectorAll('.editable');
+  editableTexts.forEach((el, index) => {
+    if (!el.id) el.id = 'bracket-slot-' + index;
+    const savedText = localStorage.getItem('volei_bracket_' + el.id);
+    if (savedText) {
+      el.textContent = savedText;
+    }
+  });
+
+  loadLeaderboard();
+});
+
+function editSlot(element) {
+  const currentText = element.textContent;
+  const newText = prompt("Editar nome na chave (vazio para limpar):", currentText);
+  if (newText !== null) {
+    const finalText = newText.trim() === '' ? currentText : newText.trim();
+    element.textContent = finalText;
+    localStorage.setItem('volei_bracket_' + element.id, finalText);
+  }
+}
+
+let teamsData = [];
+
+function loadLeaderboard() {
+  const saved = localStorage.getItem('volei_teams');
+  if (saved) {
+    teamsData = JSON.parse(saved);
+  } else {
+    teamsData = [
+      { id: 1, name: 'Time 1', wins: 0 },
+      { id: 2, name: 'Time 2', wins: 0 },
+      { id: 3, name: 'Time 3', wins: 0 },
+      { id: 4, name: 'Time 4', wins: 0 },
+      { id: 5, name: 'Time 5', wins: 0 }
+    ];
+    saveLeaderboard();
+  }
+  renderLeaderboard();
+}
+
+function saveLeaderboard() {
+  localStorage.setItem('volei_teams', JSON.stringify(teamsData));
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById('teams-list');
+  list.innerHTML = '';
+  
+  teamsData.forEach((team) => {
+    const row = document.createElement('div');
+    row.className = 'team-row';
+    
+    row.innerHTML = `
+      <input type="text" class="team-name-input" value="${team.name}" onchange="updateTeamName(${team.id}, this.value)" placeholder="Nome do time">
+      <div class="win-controls">
+        <button class="win-btn minus" onclick="updateWins(${team.id}, -1)">-</button>
+        <span class="win-count">${team.wins}</span>
+        <button class="win-btn" onclick="updateWins(${team.id}, 1)">+</button>
+        <button class="delete-btn" onclick="deleteTeam(${team.id})" title="Remover time">🗑️</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function updateTeamName(id, newName) {
+  const team = teamsData.find(t => t.id === id);
+  if (team) {
+    team.name = newName;
+    saveLeaderboard();
+  }
+}
+
+function updateWins(id, change) {
+  const team = teamsData.find(t => t.id === id);
+  if (team) {
+    team.wins += change;
+    if (team.wins < 0) team.wins = 0;
+    saveLeaderboard();
+    renderLeaderboard();
+  }
+}
+
+function addTeam() {
+  teamsData.push({
+    id: Date.now(),
+    name: 'Novo Time',
+    wins: 0
+  });
+  saveLeaderboard();
+  renderLeaderboard();
+}
+
+function deleteTeam(id) {
+  if(confirm('Tem certeza que deseja remover este time?')) {
+    teamsData = teamsData.filter(t => t.id !== id);
+    saveLeaderboard();
+    renderLeaderboard();
+  }
+}
+</script>
 
 </body>
 </html>
