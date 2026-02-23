@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏐 Fluxograma — Eliminatória Dupla</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>🏐 Eliminatória Dupla <span>— 5 Times</span></h1>
+  <p>Fluxograma completo · Só sai quem perder duas vezes</p>
+</header>
+
+<div class="flow-wrap">
+<svg viewBox="0 0 1120 1200" width="1120" height="1200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <!-- Gradients -->
+  <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#1d4ed8"/>
+    <stop offset="100%" stop-color="#3b82f6"/>
+  </linearGradient>
+  <linearGradient id="gRed" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#b91c1c"/>
+    <stop offset="100%" stop-color="#ef4444"/>
+  </linearGradient>
+  <linearGradient id="gPurple" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#7c3aed"/>
+    <stop offset="100%" stop-color="#a855f7"/>
+  </linearGradient>
+  <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#d97706"/>
+    <stop offset="100%" stop-color="#f5a623"/>
+  </linearGradient>
+  <linearGradient id="gGray" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#1e2d40"/>
+    <stop offset="100%" stop-color="#374151"/>
+  </linearGradient>
+  <filter id="glow">
+    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+    <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="shadow">
+    <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.5)"/>
+  </filter>
+  <!-- Arrow markers -->
+  <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/>
+  </marker>
+  <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/>
+  </marker>
+  <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#a855f7"/>
+  </marker>
+  <marker id="arrow-gold" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#f5a623"/>
+  </marker>
+  <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#6b7280"/>
+  </marker>
+</defs>
+
+<!-- ==================== BACKGROUND LANES ==================== -->
+<!-- Winners lane -->
+<rect x="16" y="60" width="1088" height="130" rx="12" fill="rgba(59,130,246,0.04)" stroke="rgba(59,130,246,0.12)" stroke-width="1"/>
+<text x="30" y="80" font-size="9" fill="rgba(59,130,246,0.5)" font-family="Space Grotesk" font-weight="700" letter-spacing="2" text-anchor="start" text-transform="uppercase">CHAVE VENCEDORES</text>
+
+<!-- Losers / repesca lane -->
+<rect x="16" y="420" width="1088" height="130" rx="12" fill="rgba(239,68,68,0.04)" stroke="rgba(239,68,68,0.12)" stroke-width="1"/>
+<text x="30" y="440" font-size="9" fill="rgba(239,68,68,0.5)" font-family="Space Grotesk" font-weight="700" letter-spacing="2">REPESCAGEM</text>
+
+<!-- ==================== ROUND LABELS ==================== -->
+<g font-size="10" fill="#374151" font-family="Space Grotesk" font-weight="600" letter-spacing="1">
+  <text x="560" y="58" text-anchor="middle">RODADA DE ABERTURA</text>
+  <text x="560" y="328" text-anchor="middle">2ª RODADA</text>
+  <text x="560" y="590" text-anchor="middle">3ª RODADA</text>
+  <text x="560" y="820" text-anchor="middle">SEMIFINAL</text>
+  <text x="560" y="980" text-anchor="middle">GRANDE FINAL</text>
+</g>
+
+<!-- ==================== HELPER: reusable match box macro ==================== -->
+<!-- We'll draw each manually -->
+
+<!-- ===== JOGO 1 — T1 x T2 ===== -->
+<!-- x=90, y=88, w=200, h=90 -->
+<g filter="url(#shadow)">
+  <rect x="90" y="88" width="200" height="90" rx="10" fill="#111827" stroke="url(#gBlue)" stroke-width="2"/>
+</g>
+<!-- header bar -->
+<rect x="90" y="88" width="200" height="24" rx="10" fill="url(#gBlue)"/>
+<rect x="90" y="100" width="200" height="12" fill="url(#gBlue)"/>
+<text x="190" y="104" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 1</text>
+<!-- teams -->
+<circle cx="110" cy="127" r="10" fill="rgba(59,130,246,0.3)"/>
+<text x="110" y="131" font-size="9" fill="#93c5fd" text-anchor="middle" font-weight="700">T1</text>
+<text x="128" y="131" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 1</text>
+<text x="190" y="145" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<circle cx="110" cy="158" r="10" fill="rgba(239,68,68,0.25)"/>
+<text x="110" y="162" font-size="9" fill="#fca5a5" text-anchor="middle" font-weight="700">T2</text>
+<text x="128" y="162" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 2</text>
+
+<!-- ===== JOGO 2 — T3 x T4 ===== -->
+<g filter="url(#shadow)">
+  <rect x="830" y="88" width="200" height="90" rx="10" fill="#111827" stroke="url(#gBlue)" stroke-width="2"/>
+</g>
+<rect x="830" y="88" width="200" height="24" rx="10" fill="url(#gBlue)"/>
+<rect x="830" y="100" width="200" height="12" fill="url(#gBlue)"/>
+<text x="930" y="104" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 2</text>
+<circle cx="850" cy="127" r="10" fill="rgba(34,197,94,0.25)"/>
+<text x="850" y="131" font-size="9" fill="#86efac" text-anchor="middle" font-weight="700">T3</text>
+<text x="868" y="131" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 3</text>
+<text x="930" y="145" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<circle cx="850" cy="158" r="10" fill="rgba(168,85,247,0.25)"/>
+<text x="850" y="162" font-size="9" fill="#d8b4fe" text-anchor="middle" font-weight="700">T4</text>
+<text x="868" y="162" font-size="12" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 4</text>
+
+<!-- ===== TIME 5 chapéu ===== -->
+<g filter="url(#shadow)">
+  <rect x="460" y="88" width="200" height="90" rx="10" fill="#111827" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="5,3"/>
+</g>
+<rect x="460" y="88" width="200" height="24" rx="10" fill="rgba(34,197,94,0.3)"/>
+<rect x="460" y="100" width="200" height="12" fill="rgba(34,197,94,0.3)"/>
+<text x="560" y="104" font-size="9" fill="#86efac" font-weight="700" text-anchor="middle" letter-spacing="1">CHAPÉU — AGUARDA</text>
+<circle cx="480" cy="145" r="12" fill="rgba(245,166,35,0.2)"/>
+<text x="480" y="150" font-size="10" fill="#fcd34d" text-anchor="middle" font-weight="700">T5</text>
+<text x="500" y="150" font-size="13" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 5</text>
+<text x="560" y="168" font-size="9" fill="#4b5563" text-anchor="middle">entra diretamente no Jogo 3</text>
+
+<!-- ============================================================ -->
+<!-- ARROWS R1 → R2 -->
+<!-- J1 winner (bottom of J1) → J3 -->
+<path d="M 190 178 L 190 220 L 340 220 L 340 348" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-blue)"/>
+<text x="260" y="215" font-size="9" fill="#3b82f6" text-anchor="middle">✓ Vencedor</text>
+
+<!-- J1 loser → J4 -->
+<path d="M 190 178 L 190 240 L 120 240 L 120 448" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-red)"/>
+<text x="118" y="310" font-size="9" fill="#ef4444" text-anchor="end">✗ Perdedor</text>
+
+<!-- J2 winner → J5 -->
+<path d="M 930 178 L 930 220 L 780 220 L 780 348" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-blue)"/>
+<text x="860" y="215" font-size="9" fill="#3b82f6" text-anchor="middle">✓ Vencedor</text>
+
+<!-- J2 loser → J4 -->
+<path d="M 930 178 L 930 240 L 1000 240 L 1000 448" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-red)"/>
+<text x="1002" y="310" font-size="9" fill="#ef4444">✗ Perdedor</text>
+
+<!-- T5 → J3 -->
+<path d="M 560 178 L 560 220 L 460 220 L 460 348" stroke="#22c55e" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-blue)"/>
+<text x="510" y="215" font-size="9" fill="#22c55e" text-anchor="middle">→ Jogo 3</text>
+
+<!-- ============================================================ -->
+<!-- 2ª RODADA -->
+
+<!-- JOGO 3 — Venc J1 x T5 (winners) -->
+<g filter="url(#shadow)">
+  <rect x="280" y="348" width="220" height="90" rx="10" fill="#111827" stroke="url(#gBlue)" stroke-width="2"/>
+</g>
+<rect x="280" y="348" width="220" height="24" rx="10" fill="url(#gBlue)"/>
+<rect x="280" y="360" width="220" height="12" fill="url(#gBlue)"/>
+<text x="390" y="364" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 3 · CHAVE VENCEDORES</text>
+<text x="310" y="388" font-size="10" fill="#93c5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J1</text>
+<text x="390" y="402" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<circle cx="300" cy="415" r="10" fill="rgba(245,166,35,0.2)"/>
+<text x="300" y="419" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="700">T5</text>
+<text x="316" y="419" font-size="10" fill="#e2e8f0" font-weight="600" class="editable" onclick="editSlot(this)">Time 5</text>
+
+<!-- JOGO 4 — Perd J1 x Perd J2 (losers) -->
+<g filter="url(#shadow)">
+  <rect x="450" y="448" width="220" height="90" rx="10" fill="#111827" stroke="url(#gRed)" stroke-width="2"/>
+</g>
+<rect x="450" y="448" width="220" height="24" rx="10" fill="url(#gRed)"/>
+<rect x="450" y="460" width="220" height="12" fill="url(#gRed)"/>
+<text x="560" y="464" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 4 · REPESCAGEM</text>
+<text x="476" y="488" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J1</text>
+<text x="560" y="502" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<text x="476" y="516" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J2</text>
+
+<!-- ============================================================ -->
+<!-- ARROWS R2 → R3 -->
+<!-- J3 winner → J5 -->
+<path d="M 390 438 L 390 500 L 640 500 L 640 608" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-blue)"/>
+<text x="520" y="495" font-size="9" fill="#3b82f6">✓ Vencedor</text>
+
+<!-- J3 loser → J6 -->
+<path d="M 390 438 L 390 525 L 200 525 L 200 708" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-red)"/>
+<text x="280" y="520" font-size="9" fill="#ef4444" text-anchor="middle">✗ Perdedor → J6</text>
+
+<!-- J4 winner → J6 -->
+<path d="M 560 538 L 560 560 L 290 560 L 290 708" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-red)"/>
+<text x="420" y="555" font-size="9" fill="#ef4444" text-anchor="middle">✓ Vencedor → J6</text>
+
+<!-- J4 loser = ELIMINATED 5th -->
+<path d="M 670 538 L 670 595" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)"/>
+<rect x="622" y="596" width="100" height="30" rx="6" fill="#1a1f2e" stroke="#374151" stroke-width="1.5"/>
+<text x="672" y="614" font-size="9" fill="#9ca3af" text-anchor="middle" font-weight="700">❌ 5º LUGAR</text>
+
+<!-- ============================================================ -->
+<!-- 3ª RODADA -->
+
+<!-- JOGO 5 — Venc J2 x Venc J3 (winners final) -->
+<g filter="url(#shadow)">
+  <rect x="560" y="608" width="220" height="90" rx="10" fill="#111827" stroke="url(#gBlue)" stroke-width="2.5"/>
+</g>
+<rect x="560" y="608" width="220" height="24" rx="10" fill="url(#gBlue)"/>
+<rect x="560" y="620" width="220" height="12" fill="url(#gBlue)"/>
+<text x="670" y="624" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 5 · FINAL VENCEDORES</text>
+<text x="586" y="648" font-size="10" fill="#86efac" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J2</text>
+<text x="670" y="662" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<text x="586" y="676" font-size="10" fill="#93c5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J3</text>
+
+<!-- JOGO 6 — Venc J4 x Perd J3 (repesca) -->
+<g filter="url(#shadow)">
+  <rect x="200" y="708" width="220" height="90" rx="10" fill="#111827" stroke="url(#gRed)" stroke-width="2"/>
+</g>
+<rect x="200" y="708" width="220" height="24" rx="10" fill="url(#gRed)"/>
+<rect x="200" y="720" width="220" height="12" fill="url(#gRed)"/>
+<text x="310" y="724" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 6 · REPESCAGEM</text>
+<text x="226" y="748" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J4</text>
+<text x="310" y="762" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<text x="226" y="776" font-size="10" fill="#fca5a5" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J3</text>
+
+<!-- ============================================================ -->
+<!-- ARROWS R3 → SEMI -->
+<!-- J5 winner → GF (J8) -->
+<path d="M 670 698 L 670 750 L 780 750 L 780 898" stroke="#f5a623" stroke-width="2" fill="none" stroke-dasharray="5,2" marker-end="url(#arrow-gold)"/>
+<text x="740" y="745" font-size="9" fill="#f5a623">✓ INVICTO → J8</text>
+
+<!-- J5 loser → J7 -->
+<path d="M 670 698 L 670 830 L 580 830 L 580 858" stroke="#a855f7" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-purple)"/>
+<text x="620" y="825" font-size="9" fill="#a855f7" text-anchor="middle">✗ Perdedor → J7</text>
+
+<!-- J6 winner → J7 -->
+<path d="M 310 798 L 310 840 L 460 840 L 460 858" stroke="#a855f7" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-purple)"/>
+<text x="380" y="836" font-size="9" fill="#a855f7" text-anchor="middle">✓ Vencedor → J7</text>
+
+<!-- J6 loser → 4th place -->
+<path d="M 200 760 L 136 760 L 136 818" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)"/>
+<rect x="88" y="820" width="100" height="30" rx="6" fill="#1a1f2e" stroke="#374151" stroke-width="1.5"/>
+<text x="138" y="838" font-size="9" fill="#9ca3af" text-anchor="middle" font-weight="700">❌ 4º LUGAR</text>
+
+<!-- ============================================================ -->
+<!-- SEMIFINAL -->
+
+<!-- JOGO 7 -->
+<g filter="url(#shadow)">
+  <rect x="390" y="858" width="220" height="90" rx="10" fill="#111827" stroke="url(#gPurple)" stroke-width="2"/>
+</g>
+<rect x="390" y="858" width="220" height="24" rx="10" fill="url(#gPurple)"/>
+<rect x="390" y="870" width="220" height="12" fill="url(#gPurple)"/>
+<text x="500" y="874" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="1">JOGO 7 · SEMIFINAL REPESCAGEM</text>
+<text x="416" y="898" font-size="10" fill="#c4b5fd" font-weight="600" class="editable" onclick="editSlot(this)">Vencedor J6</text>
+<text x="500" y="912" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<text x="416" y="926" font-size="10" fill="#c4b5fd" font-weight="600" class="editable" onclick="editSlot(this)">Perdedor J5</text>
+
+<!-- J7 loser → 3rd -->
+<path d="M 390 910 L 330 910 L 330 965" stroke="#6b7280" stroke-width="1.5" fill="none" marker-end="url(#arrow-gray)"/>
+<rect x="280" y="966" width="102" height="36" rx="7" fill="#1a1f2e" stroke="rgba(180,140,80,0.4)" stroke-width="1.5"/>
+<text x="331" y="981" font-size="9" fill="#cd7f32" text-anchor="middle" font-weight="700">❌ 3º LUGAR</text>
+<text x="331" y="994" font-size="10" fill="#cd7f32" text-anchor="middle">🥉</text>
+
+<!-- J7 winner → J8 -->
+<path d="M 500 948 L 500 966 L 660 966 L 660 998" stroke="#a855f7" stroke-width="2" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-purple)"/>
+<text x="580" y="962" font-size="9" fill="#a855f7">✓ Vencedor → J8</text>
+
+<!-- ============================================================ -->
+<!-- GRANDE FINAL -->
+
+<!-- JOGO 8 -->
+<g filter="url(#shadow)">
+  <rect x="560" y="998" width="260" height="98" rx="10" fill="#0d1525" stroke="url(#gGold)" stroke-width="2.5" filter="url(#glow)"/>
+</g>
+<rect x="560" y="998" width="260" height="26" rx="10" fill="url(#gGold)"/>
+<rect x="560" y="1012" width="260" height="12" fill="url(#gGold)"/>
+<text x="690" y="1015" font-size="9" fill="white" font-weight="700" text-anchor="middle" letter-spacing="2">🏆 JOGO 8 · GRANDE FINAL</text>
+<rect x="568" y="1030" width="110" height="20" rx="5" fill="rgba(245,166,35,0.15)" stroke="rgba(245,166,35,0.4)" stroke-width="1"/>
+<text x="623" y="1044" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="700" class="editable" onclick="editSlot(this)">★ Invicto (V. J5)</text>
+<text x="690" y="1060" font-size="10" fill="#4b5563" text-anchor="middle" font-weight="700">VS</text>
+<rect x="702" y="1065" width="110" height="20" rx="5" fill="rgba(168,85,247,0.1)" stroke="rgba(168,85,247,0.3)" stroke-width="1"/>
+<text x="757" y="1079" font-size="9" fill="#c4b5fd" text-anchor="middle" font-weight="700" class="editable" onclick="editSlot(this)">Repescagem (V. J7)</text>
+
+<!-- J8 result branches -->
+<!-- Invicto wins = CHAMPION -->
+<path d="M 560 1048 L 460 1048 L 460 1108" stroke="#f5a623" stroke-width="2" fill="none" marker-end="url(#arrow-gold)"/>
+<rect x="392" y="1108" width="136" height="44" rx="10" fill="rgba(245,166,35,0.12)" stroke="rgba(245,166,35,0.5)" stroke-width="2"/>
+<text x="460" y="1128" font-size="11" fill="#f5a623" text-anchor="middle" font-weight="700">🏆 CAMPEÃO</text>
+<text x="460" y="1144" font-size="8" fill="#d97706" text-anchor="middle">(Invicto ganhou)</text>
+
+<!-- If repesca wins → J9 -->
+<path d="M 820 1048 L 900 1048 L 900 1098" stroke="#6b7280" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#arrow-gray)"/>
+<text x="870" y="1042" font-size="8" fill="#6b7280" text-anchor="middle">Se repescagem ganhar</text>
+
+<!-- JOGO 9 (optional) -->
+<g filter="url(#shadow)">
+  <rect x="830" y="1098" width="240" height="74" rx="10" fill="#0d1525" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="6,3"/>
+</g>
+<rect x="830" y="1098" width="240" height="22" rx="10" fill="rgba(245,166,35,0.2)"/>
+<rect x="830" y="1108" width="240" height="12" fill="rgba(245,166,35,0.2)"/>
+<text x="950" y="1113" font-size="8.5" fill="#fcd34d" font-weight="700" text-anchor="middle" letter-spacing="1.5">JOGO 9 — DESEMPATE (se necessário)</text>
+<text x="950" y="1140" font-size="9" fill="#9ca3af" text-anchor="middle" class="editable" onclick="editSlot(this)">Time Invicto (1ª derrota)</text>
+<text x="950" y="1153" font-size="8" fill="#6b7280" text-anchor="middle">VS</text>\n<text x="950" y="1166" font-size="9" fill="#c4b5fd" text-anchor="middle" class="editable" onclick="editSlot(this)">Time Repescagem</text>
+<text x="950" y="1182" font-size="9" fill="#fcd34d" text-anchor="middle" font-weight="600">→ Vencedor = 🏆 CAMPEÃO ABSOLUTO</text>
+
+<!-- ============================================================ -->
+<!-- ROUND DIVIDERS -->
+<line x1="16" y1="270" x2="1104" y2="270" stroke="#1e2d40" stroke-width="1" stroke-dasharray="2,4"/>
+<line x1="16" y1="530" x2="1104" y2="530" stroke="#1e2d40" stroke-width="1" stroke-dasharray="2,4"/>
+<line x1="16" y1="780" x2="1104" y2="780" stroke="#1e2d40" stroke-width="1" stroke-dasharray="2,4"/>
+<line x1="16" y1="960" x2="1104" y2="960" stroke="#1e2d40" stroke-width="1" stroke-dasharray="2,4"/>
+
+<!-- ============================================================ -->
+<!-- ROUND LABELS (refined) -->
+<text x="30" y="285" font-size="8.5" fill="#1d4ed8" font-weight="700" letter-spacing="2" text-transform="uppercase">2ª RODADA ↓</text>
+<text x="30" y="544" font-size="8.5" fill="#7c3aed" font-weight="700" letter-spacing="2">3ª RODADA ↓</text>
+<text x="30" y="794" font-size="8.5" fill="#7c3aed" font-weight="700" letter-spacing="2">SEMIFINAL ↓</text>
+<text x="30" y="975" font-size="8.5" fill="#d97706" font-weight="700" letter-spacing="2">GRANDE FINAL ↓</text>
+
+</svg>
+</div>
+
+<div class="legend">
+  <span><span class="lbox" style="background:#3b82f6;"></span>Chave Vencedores</span>
+  <span><span class="lbox" style="background:#ef4444;"></span>Repescagem</span>
+  <span><span class="lbox" style="background:#a855f7;"></span>Semifinal</span>
+  <span><span class="lbox" style="background:#f5a623;"></span>Grande Final</span>
+  <span><span class="lbox" style="background:#374151; border:1px solid #4b5563;"></span>Eliminado</span>
+</div>
+
+
+<div class="leaderboard-container">
+  <h2>🏆 Tabela de Vitórias</h2>
+  <div id="teams-list"></div>
+  <button class="add-btn" onclick="addTeam()">+ Adicionar Time</button>
+</div>
+
+<div class="info-box">
+  <strong>📌 Regra de ouro:</strong> Nenhum time é eliminado na <em>primeira</em> derrota — apenas na segunda.<br>
+  O Jogo 9 só acontece se o time da repescagem vencer o Jogo 8, zerando a vantagem do invicto.
+</div>
+
+
+<script src="script.js"></script>
+
+</body>
+</html>
