@@ -16,12 +16,13 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
 
     const handleLogout = async () => {
         await signOut()
-        navigate('/admin/login')
+        navigate('/')
     }
 
     const navLinks = showAdminNav
         ? [
             { to: '/admin/dashboard', label: 'Dashboard' },
+            { to: '/admin/jogadores', label: 'Jogadores' },
             { to: '/admin/equipes', label: 'Equipes' },
             { to: '/admin/sorteio', label: 'Sorteio' },
             { to: '/admin/jogos', label: 'Jogos' },
@@ -55,8 +56,8 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
                                 key={link.to}
                                 to={link.to}
                                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${location.pathname === link.to
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-400 hover:text-white hover:bg-[#1e2d40]'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-400 hover:text-white hover:bg-[#1e2d40]'
                                     }`}
                             >
                                 {link.label}
@@ -70,12 +71,20 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
                                 Sair
                             </button>
                         )}
+                        {!showAdminNav && user && location.pathname !== '/admin/dashboard' && (
+                            <Link
+                                to="/admin/dashboard"
+                                className="px-3 py-1.5 rounded-md text-sm font-medium text-blue-400 hover:text-white hover:bg-blue-600 transition-colors"
+                            >
+                                Painel Admin
+                            </Link>
+                        )}
                         {!user && location.pathname !== '/admin/login' && (
                             <Link
                                 to="/admin/login"
                                 className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-white hover:bg-[#1e2d40] transition-colors"
                             >
-                                Admin
+                                Admin Login
                             </Link>
                         )}
                     </nav>

@@ -38,51 +38,75 @@ export default function Sorteio() {
             return
         }
 
-        if (homens.length < 10 || mulheres.length < 10) {
-            toast.error('É preciso no mínimo 10 Homens e 10 Mulheres para formar 5 times.')
-            return
-        }
-
-        if (!confirm('Esta ação vai formar as equipes, definir os titulares/reservas e gerar o chaveamento. Deseja prosseguir?')) {
-            return
+        if (jogadores.length < 20) {
+            if (!confirm(`Temos apenas ${jogadores.length} jogadores no total. O ideal são 20 para fechar 5 times de 4. Deseja prosseguir mesmo com times incompletos?`)) {
+                return
+            }
+        } else {
+            if (!confirm('Esta ação vai formar as equipes, definir os titulares/reservas e gerar o chaveamento. Deseja prosseguir?')) {
+                return
+            }
         }
 
         setSalvando(true)
         try {
-            // 1. Separar titulares (primeiros 10 por ordem de inscrição)
+            // 1. Separar os 20 Titulares por ordem de inscrição (independente do gênero)
             // Assumimos que a ordem do useJogadores já é por created_at asc
-            const titularesH = homens.slice(0, 10)
-            const titularesM = mulheres.slice(0, 10)
+            const titulares = jogadores.slice(0, 20)
 
-            // Reservas (se for necessário referenciá-los, eles ficam com equipe_id = null)
+            // 2. Separar cabeças de chave e normais dentre os 20 titulares
+            // Damos preferência em distribuir as mulheres uniformente primeiro (para que não fique um time com 0 se tiver poucas)
+            const mulheresTitulares = titulares.filter(j => j.genero === 'F')
+            const homensTitulares = titulares.filter(j => j.genero === 'M')
 
-            // 2. Separar cabeças de chave e normais
-            const cabecasH = titularesH.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const normaisH = titularesH.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            // Dentro de cada gênero, separamos cabeças de chave embaralhados e normais embaralhados
+            const cabecasM = mulheresTitulares.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const normaisM = mulheresTitulares.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const poolMulheres = [...cabecasM, ...normaisM]
 
-            const cabecasM = titularesM.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const normaisM = titularesM.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-
-            // Combina novamente para ter as pilhas de sorteio
-            const poolH = [...cabecasH, ...normaisH]
-            const poolM = [...cabecasM, ...normaisM]
+            const cabecasH = homensTitulares.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const normaisH = homensTitulares.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const poolHomens = [...cabecasH, ...normaisH]
 
             // 3. Criar os 5 times
-            const novosTimes = []
-            for (let i = 1; i <= 5; i++) {
+            type NovoTime = {
+                nome: string
+                equipe_id: string
+                jogadores: Jogador[]
+                posicao: Posicao | ''
+            }
+
+            const nomesEquipes = [
+                'Tropa do Saque',
+                'Orai e Cortai',
+                'Bloqueio Divino',
+                'Muralha de Jericó',
+                'Saque Santo'
+            ]
+
+            const novosTimes: NovoTime[] = []
+            for (let i = 0; i < 5; i++) {
                 novosTimes.push({
-                    nome: `Equipe ${i}`,
+                    nome: nomesEquipes[i],
                     equipe_id: crypto.randomUUID(), // Gerar ID UUID v4 manual para relacionar
-                    jogadores: [] as typeof titularesH,
-                    posicao: '' as Posicao
+                    jogadores: [],
+                    posicao: ''
                 })
             }
 
-            // Distribuir de forma round-robin para espalhar os cabeças de chave igualmente
-            for (let i = 0; i < 10; i++) {
-                novosTimes[i % 5].jogadores.push(poolH[i])
-                novosTimes[i % 5].jogadores.push(poolM[i])
-            }
+            // 4. Distribuir iterativamente
+            // Primeiro espalhamos as mulheres (uma a cada time iterativamente)
+            let timeAtual = 0
+            poolMulheres.forEach(m => {
+                novosTimes[timeAtual].jogadores.push(m)
+                timeAtual = (timeAtual + 1) % 5
+            })
+
+            // Depois espalhamos os homens de onde paramos
+            poolHomens.forEach(h => {
+                novosTimes[timeAtual].jogadores.push(h)
+                timeAtual = (timeAtual + 1) % 5
+            })
 
             // Shuffle posições T1 a T5
             const posicoesEmbaralhadas = [...POSICOES].sort(() => Math.random() - 0.5)
@@ -105,31 +129,31 @@ export default function Sorteio() {
 
                 // Atualizar jogadores com o equipe_id
                 const pIds = time.jogadores.map(j => j.id)
-                const { error: jErr } = await supabase
-                    .from('jogadores')
-                    .update({ equipe_id: time.equipe_id })
-                    .in('id', pIds)
-                if (jErr) throw jErr
+                // Se algum time não receber nenhum jogador, a query .in() poderia falhar no supabase
+                if (pIds.length > 0) {
+                    const { error: jErr } = await supabase
+                        .from('jogadores')
+                        .update({ equipe_id: time.equipe_id })
+                        .in('id', pIds)
+                    if (jErr) throw jErr
+                }
             }
 
-            // 5. Preencher Jogo 1 (T1 vs T2)
-            await supabase.from('jogos').update({
-                equipe_a_id: posMap['T1'],
-                equipe_b_id: posMap['T2'],
-                status: 'aguardando',
-            }).eq('id', 1)
+            // 5. Preencher Jogos iniciais e garantir que todos os 9 slots existam na tabela
+            const jogosUpsert = [
+                { id: 1, rodada: 'abertura', tipo: 'vencedores', label: 'Jogo 1 · Abertura', equipe_a_id: posMap['T1'], equipe_b_id: posMap['T2'], status: 'aguardando' },
+                { id: 2, rodada: 'abertura', tipo: 'vencedores', label: 'Jogo 2 · Abertura', equipe_a_id: posMap['T3'], equipe_b_id: posMap['T4'], status: 'aguardando' },
+                { id: 3, rodada: 'segunda', tipo: 'vencedores', label: 'Jogo 3 · Chave Vencedores', equipe_a_id: null, equipe_b_id: posMap['T5'], status: 'aguardando' },
+                { id: 4, rodada: 'segunda', tipo: 'repescagem', label: 'Jogo 4 · Repescagem', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+                { id: 5, rodada: 'terceira', tipo: 'vencedores', label: 'Jogo 5 · Final Vencedores', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+                { id: 6, rodada: 'terceira', tipo: 'repescagem', label: 'Jogo 6 · Repescagem', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+                { id: 7, rodada: 'semifinal', tipo: 'semifinal', label: 'Jogo 7 · Semifinal', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+                { id: 8, rodada: 'final', tipo: 'final', label: 'Jogo 8 · Grande Final', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+                { id: 9, rodada: 'final', tipo: 'desempate', label: 'Jogo 9 · Desempate', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
+            ]
 
-            // Preencher Jogo 2 (T3 vs T4)
-            await supabase.from('jogos').update({
-                equipe_a_id: posMap['T3'],
-                equipe_b_id: posMap['T4'],
-                status: 'aguardando',
-            }).eq('id', 2)
-
-            // Preencher Jogo 3 slot B (T5 - chapéu)
-            await supabase.from('jogos').update({
-                equipe_b_id: posMap['T5'],
-            }).eq('id', 3)
+            const { error: jogosErr } = await supabase.from('jogos').upsert(jogosUpsert)
+            if (jogosErr) throw jogosErr
 
             // 6. Ativar chaveamento e salvar fase no torneio_config
             await supabase.from('torneio_config').update({
@@ -147,6 +171,37 @@ export default function Sorteio() {
         }
     }
 
+    const limparSorteio = async () => {
+        if (!confirm('Você tem certeza? Isso apagará todas as equipes formadas, os jogos e o chaveamento. Os jogadores voltarão para a lista de espera.')) {
+            return
+        }
+
+        setSalvando(true)
+        try {
+            // Volta configuração de chaveamento
+            await supabase.from('torneio_config').update({
+                chaveamento_gerado: false,
+                fase_atual: null,
+                campeao_id: null
+            }).eq('id', 1)
+
+            // Limpa chave estrangeira dos jogadores (desvincular equipes)
+            await supabase.from('jogadores').update({ equipe_id: null }).not('id', 'is', null)
+
+            // Apagar jogos e equipes
+            await supabase.from('jogos').delete().not('id', 'is', null)
+            await supabase.from('equipes').delete().not('id', 'is', null)
+
+            toast.success('Sorteio desfeito com sucesso! Você pode sortear novamente.')
+            recarregarTorneio()
+            recarregarJogadores()
+        } catch (err: any) {
+            toast.error(err.message ?? 'Erro ao desfazer sorteio')
+        } finally {
+            setSalvando(false)
+        }
+    }
+
     return (
         <Layout config={config} showAdminNav>
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -157,27 +212,35 @@ export default function Sorteio() {
                     </p>
                 </div>
 
-                {!config?.chaveamento_gerado && (
+                {!config?.chaveamento_gerado ? (
                     <button
                         onClick={gerarSorteioEChaveamento}
-                        disabled={salvando || homens.length < 10 || mulheres.length < 10}
+                        disabled={salvando || jogadores.length === 0}
                         className="py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-bold rounded-xl transition-all text-sm shrink-0"
                     >
                         {salvando ? 'Processando...' : '🚀 Realizar Sorteio Automático'}
+                    </button>
+                ) : (
+                    <button
+                        onClick={limparSorteio}
+                        disabled={salvando}
+                        className="py-2 px-4 bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 border border-red-500/30 rounded-lg transition-all text-sm shrink-0"
+                    >
+                        {salvando ? 'Desfazendo...' : '❌ Desfazer Sorteio'}
                     </button>
                 )}
             </div>
 
             {/* Avisos */}
             {config?.chaveamento_gerado && (
-                <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-400">
-                    ✅ O sorteio já foi realizado e as equipes foram distribuídas no chaveamento.
+                <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-400 flex justify-between items-center">
+                    <span>✅ O sorteio já foi realizado e as equipes foram distribuídas no chaveamento.</span>
                 </div>
             )}
 
-            {!config?.chaveamento_gerado && (homens.length < 10 || mulheres.length < 10) && (
+            {!config?.chaveamento_gerado && jogadores.length < 20 && (
                 <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-400">
-                    ⚠️ Atenção: É necessário pelo menos 10 Homens (tem {homens.length}) e 10 Mulheres (tem {mulheres.length}) para realizar o sorteio de 5 equipes.
+                    ⚠️ Atenção: Há apenas {jogadores.length} jogadores inscritos no total. O sorteio tentará alocá-los, mas algumas equipes ficarão incompletas. Ideal: 20 inscritos.
                 </div>
             )}
 
@@ -189,6 +252,7 @@ export default function Sorteio() {
                     </h2>
                     <PlayerList
                         players={homens}
+                        globalPlayers={jogadores}
                         isLocked={!!config?.chaveamento_gerado}
                         onToggleStar={toggleCabecaChave}
                     />
@@ -201,21 +265,24 @@ export default function Sorteio() {
                     </h2>
                     <PlayerList
                         players={mulheres}
+                        globalPlayers={jogadores}
                         isLocked={!!config?.chaveamento_gerado}
                         onToggleStar={toggleCabecaChave}
                     />
                 </div>
             </div>
-        </Layout>
+        </Layout >
     )
 }
 
 function PlayerList({
     players,
+    globalPlayers,
     isLocked,
     onToggleStar
 }: {
     players: Jogador[],
+    globalPlayers: Jogador[],
     isLocked: boolean,
     onToggleStar: (j: Jogador) => void
 }) {
@@ -225,8 +292,9 @@ function PlayerList({
 
     return (
         <div className="space-y-2">
-            {players.map((j, index) => {
-                const isTitular = index < 10
+            {players.map((j) => {
+                const globalIndex = globalPlayers.findIndex(globalP => globalP.id === j.id)
+                const isTitular = globalIndex !== -1 && globalIndex < 20
 
                 return (
                     <div
@@ -237,7 +305,7 @@ function PlayerList({
                     >
                         <div className="flex flex-col">
                             <span className={`font-semibold text-sm ${isTitular ? 'text-white' : 'text-gray-400'}`}>
-                                {index + 1}. {j.nome}
+                                {globalIndex + 1}. {j.nome}
                             </span>
                             <span className="text-xs text-gray-500">
                                 {isTitular ? 'Titular' : 'Reserva'} {j.equipe_id ? '✓ Em equipe' : ''}

@@ -29,8 +29,9 @@ export function useTorneio() {
             setJogos(j)
             setEquipes(e)
             if (c.data) setConfig(c.data as unknown as TorneioConfig)
-        } catch (err) {
+        } catch (err: any) {
             console.error('Erro ao carregar dados:', err)
+            toast.error(`Erro ao carregar os dados: ${err.message || JSON.stringify(err)}`)
         } finally {
             setLoading(false)
         }

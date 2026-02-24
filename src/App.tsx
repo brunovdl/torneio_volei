@@ -5,6 +5,7 @@ import Chaveamento from '@/pages/Chaveamento'
 import Login from '@/pages/admin/Login'
 import Dashboard from '@/pages/admin/Dashboard'
 import Equipes from '@/pages/admin/Equipes'
+import Jogadores from '@/pages/admin/Jogadores'
 import Sorteio from '@/pages/admin/Sorteio'
 import Jogos from '@/pages/admin/Jogos'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -25,6 +26,14 @@ export default function App() {
                 element={
                     <ProtectedRoute>
                         <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/admin/jogadores"
+                element={
+                    <ProtectedRoute>
+                        <Jogadores />
                     </ProtectedRoute>
                 }
             />
