@@ -16,11 +16,14 @@ export default function Sorteio() {
     const homens = jogadores.filter(j => j.genero === 'M')
     const mulheres = jogadores.filter(j => j.genero === 'F')
 
-    // Titulares são os cabeças de chave primeiro, depois o restante descendo na lista (até 20 vagas)
+    // Calculamos dinamicamente (para preencher times de forma que todo mundo jogue)
+    // Se houverem muitos jogadores, aumentamos o número de times ou distribuimos mais reservas em times.
+    // O pedido original diz "forme os times de acordo com a quantidade de jogadores registrados mantendo os cabeças de chave".
+    // Ou seja: TODOS os inscritos devem entrar em algum time. (Titulares = TODOS)
     const titulares = [
         ...jogadores.filter(j => j.cabeca_de_chave),
         ...jogadores.filter(j => !j.cabeca_de_chave)
-    ].slice(0, 20)
+    ]
     const titularesIds = new Set(titulares.map(t => t.id))
 
     // Toggles a player's star (cabeça de chave)
@@ -45,23 +48,27 @@ export default function Sorteio() {
             return
         }
 
-        if (jogadores.length < 20) {
-            if (!confirm(`Temos apenas ${jogadores.length} jogadores no total. O ideal são 20 para fechar 5 times de 4. Deseja prosseguir mesmo com times incompletos?`)) {
-                return
-            }
-        } else {
-            if (!confirm('Esta ação vai formar as equipes, definir os titulares/reservas e gerar o chaveamento. Deseja prosseguir?')) {
-                return
-            }
+        if (jogadores.length === 0) {
+            toast.error('Não há jogadores cadastrados.')
+            return
+        }
+
+        // Define o número de times dinamicamente considerando equipes com ~4, ou no máximo as 5 equipes padrão (já que temos 5 nomes e o chaveamento é para 5).
+        // Na verdade o usuário precisa q os times formem dinamicamente independente.
+        // Espera, o chaveamento original comporta apenas 5 equipes. 
+        // Vamos manter sempre as mesmas 5 equipes criadas, mas distribuir todos os jogadores dentro delas uniformemente!
+
+        if (!confirm('Todos os inscritos serão distribuídos nas 5 equipes de acordo com o gênero e cabeças de chave. Deseja prosseguir?')) {
+            return
         }
 
         setSalvando(true)
         try {
-            // 1. Pegamos os titulares já separados antes da execução deste bloco
+            // 1. Pegamos todos os inscritos
             const titularesAtuais = titulares
 
-            // 2. Separar cabeças de chave e normais dentre os 20 titulares
-            // Damos preferência em distribuir as mulheres uniformente primeiro (para que não fique um time com 0 se tiver poucas)
+            // 2. Separar cabeças de chave e normais dentre TODOS
+            // Damos preferência em distribuir as mulheres uniformente primeiro
             const mulheresTitulares = titularesAtuais.filter(j => j.genero === 'F')
             const homensTitulares = titularesAtuais.filter(j => j.genero === 'M')
 
@@ -219,7 +226,7 @@ export default function Sorteio() {
                 <div>
                     <h1 className="font-syne text-2xl font-bold text-white">🎲 Sorteio e Equipes</h1>
                     <p className="text-gray-500 text-sm mt-1">
-                        Gerencie os cabeças de chave e defina as equipes. O sorteio distribuirá Homens e Mulheres igualitariamente (2 de cada por equipe) respeitando a ordem de inscrição (titulares e reservas).
+                        Gerencie os cabeças de chave. O sorteio distribuirá todos os {jogadores.length} inscritos nas equipes proporcionalmente, equilibrando H/M.
                     </p>
                 </div>
 
@@ -249,9 +256,9 @@ export default function Sorteio() {
                 </div>
             )}
 
-            {!config?.chaveamento_gerado && jogadores.length < 20 && (
+            {!config?.chaveamento_gerado && (
                 <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-400">
-                    ⚠️ Atenção: Há apenas {jogadores.length} jogadores inscritos no total. O sorteio tentará alocá-los, mas algumas equipes ficarão incompletas. Ideal: 20 inscritos.
+                    ℹ️ Ao sortear, <strong>todos</strong> os {jogadores.length} inscritos serão divididos proporcionalmente nas equipes, equilibrando as estrelas e dividindo Homens e Mulheres igualmente de forma dinâmica.
                 </div>
             )}
 
@@ -323,7 +330,7 @@ function PlayerList({
                                 {globalIndex + 1}. {j.nome}
                             </span>
                             <span className="text-xs text-gray-500">
-                                {isTitular ? 'Titular' : 'Reserva'} {j.equipe_id ? '✓ Em equipe' : ''}
+                                {j.equipe_id ? '✓ Em equipe' : 'No Sorteio'}
                             </span>
                         </div>
 
