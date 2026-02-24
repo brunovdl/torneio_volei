@@ -1,247 +1,263 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useTorneio } from '@/hooks/useTorneio'
+import { useJogadores } from '@/hooks/useJogadores'
 import Layout from '@/components/Layout'
-import type { Posicao } from '@/types'
+import type { Posicao, Jogador } from '@/types'
 
 const POSICOES: Posicao[] = ['T1', 'T2', 'T3', 'T4', 'T5']
 
-const DESCRICOES: Record<string, string> = {
-    T1: 'Jogo 1 (vs T2)',
-    T2: 'Jogo 1 (vs T1) → Repescagem se perder',
-    T3: 'Jogo 2 (vs T4)',
-    T4: 'Jogo 2 (vs T3) → Repescagem se perder',
-    T5: '🎩 Chapéu — entra no Jogo 3',
-}
-
 export default function Sorteio() {
-    const { equipes, config, recarregar } = useTorneio()
-    const [atribuicoes, setAtribuicoes] = useState<Record<string, Posicao>>({})
+    const { config, recarregar: recarregarTorneio } = useTorneio()
+    const { jogadores, recarregar: recarregarJogadores } = useJogadores()
     const [salvando, setSalvando] = useState(false)
 
-    // Inicializar com atribuições existentes
-    useEffect(() => {
-        const mapa: Record<string, Posicao> = {}
-        equipes.forEach(eq => {
-            if (eq.posicao) mapa[eq.id] = eq.posicao
-        })
-        setAtribuicoes(mapa)
-    }, [equipes])
+    const homens = jogadores.filter(j => j.genero === 'M')
+    const mulheres = jogadores.filter(j => j.genero === 'F')
 
-    const posicaoUsada = (pos: Posicao, ignorarId?: string): boolean =>
-        Object.entries(atribuicoes).some(([id, p]) => p === pos && id !== ignorarId)
+    // Toggles a player's star (cabeça de chave)
+    const toggleCabecaChave = async (jogador: Jogador) => {
+        if (config?.chaveamento_gerado) return
 
-    const setPosicao = (equipeId: string, pos: Posicao) => {
-        setAtribuicoes(prev => ({ ...prev, [equipeId]: pos }))
-    }
-
-    const validar = (): string | null => {
-        if (equipes.length < 5) return 'É necessário ter 5 equipes inscritas'
-        const posicoesMarcadas = Object.values(atribuicoes).filter(Boolean)
-        if (posicoesMarcadas.length < 5) return 'Atribua posições para todas as 5 equipes'
-        const unique = new Set(posicoesMarcadas)
-        if (unique.size < 5) return 'Cada equipe deve ter uma posição diferente'
-        return null
-    }
-
-    const salvarSorteio = async () => {
-        const erroValidacao = validar()
-        if (erroValidacao) {
-            toast.error(erroValidacao)
-            return
-        }
-
-        setSalvando(true)
         try {
-            // Atualizar posições de cada equipe
-            for (const [equipeId, posicao] of Object.entries(atribuicoes)) {
-                const { error } = await supabase
-                    .from('equipes')
-                    .update({ posicao })
-                    .eq('id', equipeId)
-                if (error) throw error
-            }
-            toast.success('Posições salvas!')
-            recarregar()
+            const { error } = await supabase
+                .from('jogadores')
+                .update({ cabeca_de_chave: !jogador.cabeca_de_chave })
+                .eq('id', jogador.id)
+            if (error) throw error
+            recarregarJogadores()
         } catch (err: any) {
-            toast.error(err.message ?? 'Erro ao salvar')
-        } finally {
-            setSalvando(false)
+            toast.error(err.message ?? 'Erro ao atualizar jogador')
         }
     }
 
-    const gerarChaveamento = async () => {
-        const erroValidacao = validar()
-        if (erroValidacao) {
-            toast.error(erroValidacao)
+    const gerarSorteioEChaveamento = async () => {
+        if (config?.chaveamento_gerado) {
+            toast.error('Chaveamento já foi gerado!')
             return
         }
 
-        if (!confirm('Gerar o chaveamento irá travar as posições e tornar o bracket público. Confirma?')) return
+        if (homens.length < 10 || mulheres.length < 10) {
+            toast.error('É preciso no mínimo 10 Homens e 10 Mulheres para formar 5 times.')
+            return
+        }
+
+        if (!confirm('Esta ação vai formar as equipes, definir os titulares/reservas e gerar o chaveamento. Deseja prosseguir?')) {
+            return
+        }
 
         setSalvando(true)
         try {
-            // Primeiro salvar as posições
-            for (const [equipeId, posicao] of Object.entries(atribuicoes)) {
-                await supabase.from('equipes').update({ posicao }).eq('id', equipeId)
+            // 1. Separar titulares (primeiros 10 por ordem de inscrição)
+            // Assumimos que a ordem do useJogadores já é por created_at asc
+            const titularesH = homens.slice(0, 10)
+            const titularesM = mulheres.slice(0, 10)
+
+            // Reservas (se for necessário referenciá-los, eles ficam com equipe_id = null)
+
+            // 2. Separar cabeças de chave e normais
+            const cabecasH = titularesH.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const normaisH = titularesH.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+
+            const cabecasM = titularesM.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+            const normaisM = titularesM.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
+
+            // Combina novamente para ter as pilhas de sorteio
+            const poolH = [...cabecasH, ...normaisH]
+            const poolM = [...cabecasM, ...normaisM]
+
+            // 3. Criar os 5 times
+            const novosTimes = []
+            for (let i = 1; i <= 5; i++) {
+                novosTimes.push({
+                    nome: `Equipe ${i}`,
+                    equipe_id: crypto.randomUUID(), // Gerar ID UUID v4 manual para relacionar
+                    jogadores: [] as typeof titularesH,
+                    posicao: '' as Posicao
+                })
             }
 
-            // Montar mapa posição → equipeId
+            // Distribuir de forma round-robin para espalhar os cabeças de chave igualmente
+            for (let i = 0; i < 10; i++) {
+                novosTimes[i % 5].jogadores.push(poolH[i])
+                novosTimes[i % 5].jogadores.push(poolM[i])
+            }
+
+            // Shuffle posições T1 a T5
+            const posicoesEmbaralhadas = [...POSICOES].sort(() => Math.random() - 0.5)
+
+            // 4. Inserir equipes no banco e atualizar os jogadores
             const posMap: Record<string, string> = {}
-            for (const [equipeId, posicao] of Object.entries(atribuicoes)) {
-                if (posicao) posMap[posicao] = equipeId
+
+            for (let i = 0; i < 5; i++) {
+                const time = novosTimes[i]
+                time.posicao = posicoesEmbaralhadas[i]
+                posMap[time.posicao as string] = time.equipe_id
+
+                // Inserir equipe
+                const { error: eqErr } = await supabase.from('equipes').insert({
+                    id: time.equipe_id,
+                    nome: time.nome,
+                    posicao: time.posicao
+                })
+                if (eqErr) throw eqErr
+
+                // Atualizar jogadores com o equipe_id
+                const pIds = time.jogadores.map(j => j.id)
+                const { error: jErr } = await supabase
+                    .from('jogadores')
+                    .update({ equipe_id: time.equipe_id })
+                    .in('id', pIds)
+                if (jErr) throw jErr
             }
 
-            // Preencher Jogo 1: T1 vs T2
+            // 5. Preencher Jogo 1 (T1 vs T2)
             await supabase.from('jogos').update({
                 equipe_a_id: posMap['T1'],
                 equipe_b_id: posMap['T2'],
                 status: 'aguardando',
             }).eq('id', 1)
 
-            // Preencher Jogo 2: T3 vs T4
+            // Preencher Jogo 2 (T3 vs T4)
             await supabase.from('jogos').update({
                 equipe_a_id: posMap['T3'],
                 equipe_b_id: posMap['T4'],
                 status: 'aguardando',
             }).eq('id', 2)
 
-            // Preencher Jogo 3 slot B: T5 (chapéu)
+            // Preencher Jogo 3 slot B (T5 - chapéu)
             await supabase.from('jogos').update({
                 equipe_b_id: posMap['T5'],
             }).eq('id', 3)
 
-            // Ativar chaveamento e definir fase
+            // 6. Ativar chaveamento e salvar fase no torneio_config
             await supabase.from('torneio_config').update({
                 chaveamento_gerado: true,
                 fase_atual: 'abertura',
             }).eq('id', 1)
 
-            toast.success('🏆 Chaveamento gerado! Bracket agora é público.')
-            recarregar()
+            toast.success('🎉 Sorteio e Chaveamento concluídos!')
+            recarregarTorneio()
+            recarregarJogadores()
         } catch (err: any) {
-            toast.error(err.message ?? 'Erro ao gerar chaveamento')
+            toast.error(err.message ?? 'Erro ao concluir sorteio')
         } finally {
             setSalvando(false)
         }
     }
 
-    const equipesPorPosicao = (pos: Posicao) =>
-        equipes.find(e => atribuicoes[e.id] === pos)
-
-    if (equipes.length < 5) {
-        return (
-            <Layout config={config} showAdminNav>
-                <div className="text-center py-16">
-                    <p className="text-5xl mb-4">⏳</p>
-                    <h2 className="font-syne text-xl font-bold text-white mb-2">Aguardando equipes</h2>
-                    <p className="text-gray-500 text-sm">
-                        {equipes.length}/5 equipes inscritas. O sorteio só pode ser feito com todas as 5 vagas preenchidas.
-                    </p>
-                </div>
-            </Layout>
-        )
-    }
-
     return (
         <Layout config={config} showAdminNav>
-            <div className="mb-6">
-                <h1 className="font-syne text-2xl font-bold text-white">🎲 Sorteio</h1>
-                <p className="text-gray-500 text-sm mt-1">
-                    Atribua uma posição (T1–T5) para cada equipe. T5 é o "chapéu" e entra no Jogo 3.
-                </p>
-                {config?.chaveamento_gerado && (
-                    <div className="mt-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-2 text-sm text-green-400">
-                        ✅ Chaveamento já gerado. Alterar aqui não refletirá automaticamente nos jogos em andamento.
-                    </div>
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="font-syne text-2xl font-bold text-white">🎲 Sorteio e Equipes</h1>
+                    <p className="text-gray-500 text-sm mt-1">
+                        Gerencie os cabeças de chave e defina as equipes. O sorteio distribuirá Homens e Mulheres igualitariamente (2 de cada por equipe) respeitando a ordem de inscrição (titulares e reservas).
+                    </p>
+                </div>
+
+                {!config?.chaveamento_gerado && (
+                    <button
+                        onClick={gerarSorteioEChaveamento}
+                        disabled={salvando || homens.length < 10 || mulheres.length < 10}
+                        className="py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-bold rounded-xl transition-all text-sm shrink-0"
+                    >
+                        {salvando ? 'Processando...' : '🚀 Realizar Sorteio Automático'}
+                    </button>
                 )}
             </div>
 
-            {/* Preview visual das posições */}
-            <div className="grid grid-cols-5 gap-2 mb-8">
-                {POSICOES.map(pos => {
-                    const eq = equipesPorPosicao(pos)
-                    return (
-                        <div
-                            key={pos}
-                            className={`rounded-xl border text-center p-3 transition-all ${eq ? 'border-blue-500/40 bg-blue-500/5' : 'border-dashed border-gray-700 bg-[#0d1117]'
-                                }`}
-                        >
-                            <div className="text-xs text-gray-500 mb-2 font-bold">{pos}</div>
-                            {eq ? (
-                                <>
-                                    {eq.logo_url ? (
-                                        <img src={eq.logo_url} alt={eq.nome} className="w-10 h-10 rounded-full mx-auto mb-1 object-cover" />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white mx-auto mb-1">
-                                            {eq.nome[0]?.toUpperCase()}
-                                        </div>
-                                    )}
-                                    <p className="text-xs text-white font-medium truncate">{eq.nome}</p>
-                                </>
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-[#1e2d40] mx-auto mb-1 flex items-center justify-center text-gray-600">?</div>
-                            )}
-                        </div>
-                    )
-                })}
-            </div>
+            {/* Avisos */}
+            {config?.chaveamento_gerado && (
+                <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-400">
+                    ✅ O sorteio já foi realizado e as equipes foram distribuídas no chaveamento.
+                </div>
+            )}
 
-            {/* Formulário de atribuição */}
-            <div className="space-y-3 mb-8">
-                {equipes.map(eq => (
-                    <div key={eq.id} className="bg-[#111827] border border-[#1e2d40] rounded-2xl p-4 flex items-center gap-4">
-                        {eq.logo_url ? (
-                            <img src={eq.logo_url} alt={eq.nome} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center font-bold text-white shrink-0">
-                                {eq.nome[0]?.toUpperCase()}
-                            </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-white">{eq.nome}</p>
-                            {atribuicoes[eq.id] && (
-                                <p className="text-xs text-gray-500">{DESCRICOES[atribuicoes[eq.id]!]}</p>
-                            )}
-                        </div>
-                        <select
-                            value={(atribuicoes[eq.id] as string) || ''}
-                            onChange={e => setPosicao(eq.id, e.target.value as Posicao)}
-                            className="bg-[#1f2937] border border-[#374151] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors shrink-0"
-                        >
-                            <option value="">Selecionar...</option>
-                            {POSICOES.map(pos => (
-                                <option
-                                    key={pos}
-                                    value={pos as string}
-                                    disabled={posicaoUsada(pos, eq.id)}
-                                >
-                                    {pos} {pos === 'T5' ? '(Chapéu)' : ''} {posicaoUsada(pos, eq.id) ? '(em uso)' : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                ))}
-            </div>
+            {!config?.chaveamento_gerado && (homens.length < 10 || mulheres.length < 10) && (
+                <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-400">
+                    ⚠️ Atenção: É necessário pelo menos 10 Homens (tem {homens.length}) e 10 Mulheres (tem {mulheres.length}) para realizar o sorteio de 5 equipes.
+                </div>
+            )}
 
-            {/* Botões */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                    onClick={salvarSorteio}
-                    disabled={salvando}
-                    className="flex-1 py-3 bg-[#1e2d40] hover:bg-[#253448] border border-[#374151] text-white font-bold rounded-xl transition-all text-sm disabled:opacity-50"
-                >
-                    {salvando ? 'Salvando...' : '💾 Salvar Posições'}
-                </button>
-                <button
-                    onClick={gerarChaveamento}
-                    disabled={salvando}
-                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all text-sm disabled:opacity-50"
-                >
-                    {salvando ? 'Gerando...' : '🚀 Gerar Chaveamento'}
-                </button>
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* HOMENS */}
+                <div className="bg-[#111827] rounded-2xl border border-[#1e2d40] p-6">
+                    <h2 className="font-syne text-xl font-bold text-white flex items-center gap-2 mb-4">
+                        👨 Homens <span className="text-sm font-normal text-gray-500">({homens.length})</span>
+                    </h2>
+                    <PlayerList
+                        players={homens}
+                        isLocked={!!config?.chaveamento_gerado}
+                        onToggleStar={toggleCabecaChave}
+                    />
+                </div>
+
+                {/* MULHERES */}
+                <div className="bg-[#111827] rounded-2xl border border-[#1e2d40] p-6">
+                    <h2 className="font-syne text-xl font-bold text-white flex items-center gap-2 mb-4">
+                        👩 Mulheres <span className="text-sm font-normal text-gray-500">({mulheres.length})</span>
+                    </h2>
+                    <PlayerList
+                        players={mulheres}
+                        isLocked={!!config?.chaveamento_gerado}
+                        onToggleStar={toggleCabecaChave}
+                    />
+                </div>
             </div>
         </Layout>
+    )
+}
+
+function PlayerList({
+    players,
+    isLocked,
+    onToggleStar
+}: {
+    players: Jogador[],
+    isLocked: boolean,
+    onToggleStar: (j: Jogador) => void
+}) {
+    if (players.length === 0) {
+        return <p className="text-gray-500 text-sm italic">Nenhum atleta inscrito.</p>
+    }
+
+    return (
+        <div className="space-y-2">
+            {players.map((j, index) => {
+                const isTitular = index < 10
+
+                return (
+                    <div
+                        key={j.id}
+                        className={`flex items-center justify-between p-3 rounded-xl border transition-colors
+                            ${isTitular ? 'bg-[#1f2937] border-[#374151]' : 'bg-[#0d1117] border-dashed border-[#1e2d40] opacity-80'}
+                        `}
+                    >
+                        <div className="flex flex-col">
+                            <span className={`font-semibold text-sm ${isTitular ? 'text-white' : 'text-gray-400'}`}>
+                                {index + 1}. {j.nome}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                                {isTitular ? 'Titular' : 'Reserva'} {j.equipe_id ? '✓ Em equipe' : ''}
+                            </span>
+                        </div>
+
+                        <button
+                            disabled={isLocked}
+                            onClick={() => onToggleStar(j)}
+                            title={j.cabeca_de_chave ? "Remover de Cabeça de Chave" : "Marcar como Cabeça de Chave"}
+                            className={`p-2 rounded-lg transition-all ${j.cabeca_de_chave
+                                ? 'bg-[#f5a623]/20 text-[#f5a623]'
+                                : 'bg-gray-800 text-gray-600 hover:text-gray-400 hover:bg-gray-700'
+                                } ${isLocked ? 'cursor-default opacity-60' : ''}`}
+                        >
+                            ⭐
+                        </button>
+                    </div>
+                )
+            })}
+        </div>
     )
 }

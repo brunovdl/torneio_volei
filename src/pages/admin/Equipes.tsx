@@ -59,13 +59,6 @@ export default function Equipes() {
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-sm text-gray-400 truncate">
-                                    <span className="text-gray-500">Cap:</span> {eq.responsavel}
-                                </p>
-                                <div className="flex gap-4 mt-1 text-xs text-gray-500 flex-wrap">
-                                    <span>📧 {eq.email}</span>
-                                    {eq.whatsapp && <span>📱 {eq.whatsapp}</span>}
-                                </div>
                             </div>
 
                             {/* Colocação */}

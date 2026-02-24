@@ -4,15 +4,23 @@ export type Posicao = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | null
 
 export type ColocacaoFinal = '1' | '2' | '3' | '4' | '5' | null
 
+export interface Jogador {
+    id: string
+    nome: string
+    genero: 'M' | 'F'
+    whatsapp: string | null
+    cabeca_de_chave: boolean
+    equipe_id: string | null
+    created_at: string
+}
+
 export interface Equipe {
     id: string
     nome: string
-    responsavel: string
-    email: string
-    whatsapp: string | null
     logo_url: string | null
     posicao: Posicao
     colocacao_final: ColocacaoFinal
+    jogadores?: Jogador[]
     created_at: string
 }
 
