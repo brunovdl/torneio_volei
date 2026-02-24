@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useTorneio } from '@/hooks/useTorneio'
 import Layout from '@/components/Layout'
-import type { Equipe, Posicao } from '@/types'
+import type { Posicao } from '@/types'
 
 const POSICOES: Posicao[] = ['T1', 'T2', 'T3', 'T4', 'T5']
 
@@ -16,7 +16,7 @@ const DESCRICOES: Record<string, string> = {
 }
 
 export default function Sorteio() {
-    const { equipes, config, jogos, recarregar } = useTorneio()
+    const { equipes, config, recarregar } = useTorneio()
     const [atribuicoes, setAtribuicoes] = useState<Record<string, Posicao>>({})
     const [salvando, setSalvando] = useState(false)
 
@@ -206,7 +206,7 @@ export default function Sorteio() {
                             )}
                         </div>
                         <select
-                            value={atribuicoes[eq.id] ?? ''}
+                            value={(atribuicoes[eq.id] as string) || ''}
                             onChange={e => setPosicao(eq.id, e.target.value as Posicao)}
                             className="bg-[#1f2937] border border-[#374151] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors shrink-0"
                         >
@@ -214,7 +214,7 @@ export default function Sorteio() {
                             {POSICOES.map(pos => (
                                 <option
                                     key={pos}
-                                    value={pos}
+                                    value={pos as string}
                                     disabled={posicaoUsada(pos, eq.id)}
                                 >
                                     {pos} {pos === 'T5' ? '(Chapéu)' : ''} {posicaoUsada(pos, eq.id) ? '(em uso)' : ''}
