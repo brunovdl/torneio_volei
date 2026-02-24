@@ -28,7 +28,13 @@ export function useTorneio() {
             ])
             setJogos(j)
             setEquipes(e)
-            if (c.data) setConfig(c.data as unknown as TorneioConfig)
+            if (c.data) {
+                setConfig(c.data as unknown as TorneioConfig)
+            } else {
+                // Se a tabela acabou de subir e está vazia, o config deve ser nulo e criamos o registro dummy "silenciosamente"
+                supabase.from('torneio_config').upsert({ id: 1, chaveamento_gerado: false, fase_atual: null, campeao_id: null }).then()
+                setConfig(null)
+            }
         } catch (err: any) {
             console.error('Erro ao carregar dados:', err)
             toast.error(`Erro ao carregar os dados: ${err.message || JSON.stringify(err)}`)

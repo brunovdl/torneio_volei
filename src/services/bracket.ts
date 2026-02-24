@@ -162,8 +162,7 @@ export async function processarResultado({
                     .eq('id', perdedorId)
                 await supabase
                     .from('torneio_config')
-                    .update({ campeao_id: vencedorId, fase_atual: 'encerrado' })
-                    .eq('id', 1)
+                    .upsert({ id: 1, campeao_id: vencedorId, fase_atual: 'encerrado' })
                 // Deletar / marcar J9 como irrelevante
                 await supabase
                     .from('jogos')
@@ -173,8 +172,7 @@ export async function processarResultado({
                 // Repescagem ganhou → J9 necessário, preencher equipes
                 await supabase
                     .from('torneio_config')
-                    .update({ fase_atual: 'desempate' })
-                    .eq('id', 1)
+                    .upsert({ id: 1, fase_atual: 'desempate' })
                 // Equipes já preenchidas via regra.vencedor / regra.perdedor acima
             }
         }
@@ -191,8 +189,7 @@ export async function processarResultado({
                 .eq('id', perdedorId)
             await supabase
                 .from('torneio_config')
-                .update({ campeao_id: vencedorId, fase_atual: 'encerrado' })
-                .eq('id', 1)
+                .upsert({ id: 1, campeao_id: vencedorId, fase_atual: 'encerrado' })
         }
 
         return { error: null }
@@ -252,8 +249,7 @@ export async function desfazerResultado(jogo: Jogo): Promise<{ error: Error | nu
         if (jogo.id === 8 || jogo.id === 9) {
             await supabase
                 .from('torneio_config')
-                .update({ campeao_id: null, fase_atual: 'grande_final' })
-                .eq('id', 1)
+                .upsert({ id: 1, campeao_id: null, fase_atual: 'grande_final' })
             if (jogo.vencedor_id) {
                 await supabase.from('equipes').update({ colocacao_final: null }).eq('id', jogo.vencedor_id)
             }

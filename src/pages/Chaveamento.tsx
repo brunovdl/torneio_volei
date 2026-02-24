@@ -179,7 +179,7 @@ function ByeCard({ time5 }: { time5?: { nome: string; logo_url?: string | null }
         <div className="rounded-xl border-2 border-dashed border-green-500/30 bg-green-500/5 w-52 shrink-0 p-4 text-center">
             <div className="text-[10px] text-green-500/70 tracking-widest uppercase mb-3">Chapéu — Aguarda</div>
             {time5?.logo_url ? (
-                <img src={time5.logo_url} alt={time5.nome} className="w-12 h-12 rounded-full mx-auto mb-2 object-cover" />
+                <img src={time5.logo_url} alt={time5.nome} className="w-12 h-12 mx-auto mb-2 object-contain mix-blend-plus-lighter" />
             ) : (
                 <div className="w-12 h-12 rounded-full bg-[#1e2d40] mx-auto mb-2 flex items-center justify-center text-lg font-bold text-green-400">
                     {time5 ? time5.nome[0]?.toUpperCase() : 'T5'}
@@ -222,7 +222,7 @@ function RankingFinal({ jogos }: { jogos: Jogo[] }) {
                     <div key={t.nome} className="flex items-center gap-3 p-2 rounded-lg bg-[#111827]">
                         <span className="text-xl w-7 text-center">{emojis[t.colocacao]}</span>
                         {t.logo_url ? (
-                            <img src={t.logo_url} alt={t.nome} className="w-8 h-8 rounded-full object-cover" />
+                            <img src={t.logo_url} alt={t.nome} className="w-10 h-10 object-contain drop-shadow-md mix-blend-plus-lighter" />
                         ) : (
                             <div className="w-8 h-8 rounded-full bg-[#1e2d40] flex items-center justify-center text-sm font-bold text-gray-400">
                                 {t.nome[0]}

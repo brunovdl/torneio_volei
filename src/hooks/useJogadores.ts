@@ -12,6 +12,7 @@ export function useJogadores() {
                 .from('jogadores')
                 .select('*')
                 .order('created_at', { ascending: true })
+                .order('nome', { ascending: true })
 
             if (error) throw error
             setJogadores(data || [])

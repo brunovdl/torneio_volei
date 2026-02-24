@@ -94,8 +94,8 @@ function TeamRow({ equipe, isVencedor, isPerdedor, placar }: TeamRowProps) {
     return (
         <div
             className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all ${isVencedor ? 'bg-green-500/10 border border-green-500/30' :
-                    isPerdedor ? 'bg-red-500/10 border border-red-500/20 opacity-60' :
-                        'bg-[#1f2937]'
+                isPerdedor ? 'bg-red-500/10 border border-red-500/20 opacity-60' :
+                    'bg-[#1f2937]'
                 }`}
         >
             {/* Logo ou avatar */}
@@ -103,7 +103,7 @@ function TeamRow({ equipe, isVencedor, isPerdedor, placar }: TeamRowProps) {
                 <img
                     src={equipe.logo_url}
                     alt={equipe.nome}
-                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                    className="w-8 h-8 object-contain shrink-0 mix-blend-plus-lighter"
                 />
             ) : (
                 <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">

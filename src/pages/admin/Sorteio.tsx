@@ -16,6 +16,13 @@ export default function Sorteio() {
     const homens = jogadores.filter(j => j.genero === 'M')
     const mulheres = jogadores.filter(j => j.genero === 'F')
 
+    // Titulares são os cabeças de chave primeiro, depois o restante descendo na lista (até 20 vagas)
+    const titulares = [
+        ...jogadores.filter(j => j.cabeca_de_chave),
+        ...jogadores.filter(j => !j.cabeca_de_chave)
+    ].slice(0, 20)
+    const titularesIds = new Set(titulares.map(t => t.id))
+
     // Toggles a player's star (cabeça de chave)
     const toggleCabecaChave = async (jogador: Jogador) => {
         if (config?.chaveamento_gerado) return
@@ -50,14 +57,13 @@ export default function Sorteio() {
 
         setSalvando(true)
         try {
-            // 1. Separar os 20 Titulares por ordem de inscrição (independente do gênero)
-            // Assumimos que a ordem do useJogadores já é por created_at asc
-            const titulares = jogadores.slice(0, 20)
+            // 1. Pegamos os titulares já separados antes da execução deste bloco
+            const titularesAtuais = titulares
 
             // 2. Separar cabeças de chave e normais dentre os 20 titulares
             // Damos preferência em distribuir as mulheres uniformente primeiro (para que não fique um time com 0 se tiver poucas)
-            const mulheresTitulares = titulares.filter(j => j.genero === 'F')
-            const homensTitulares = titulares.filter(j => j.genero === 'M')
+            const mulheresTitulares = titularesAtuais.filter(j => j.genero === 'F')
+            const homensTitulares = titularesAtuais.filter(j => j.genero === 'M')
 
             // Dentro de cada gênero, separamos cabeças de chave embaralhados e normais embaralhados
             const cabecasM = mulheresTitulares.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
@@ -74,23 +80,25 @@ export default function Sorteio() {
                 equipe_id: string
                 jogadores: Jogador[]
                 posicao: Posicao | ''
+                logo_url: string
             }
 
-            const nomesEquipes = [
-                'Tropa do Saque',
-                'Orai e Cortai',
-                'Bloqueio Divino',
-                'Muralha de Jericó',
-                'Saque Santo'
+            const timesConfig = [
+                { nome: 'Tropa do Saque', logo_url: '/tropa_do_saque.png' },
+                { nome: 'Orai e Cortai', logo_url: '/orai_cortai.png' },
+                { nome: 'Bloqueio Divino', logo_url: '/bloqueio_divino.png' },
+                { nome: 'Muralha de Jericó', logo_url: '/muralha_de_jerico.png' },
+                { nome: 'Saque Santo', logo_url: '/saque_santo.png' }
             ]
 
             const novosTimes: NovoTime[] = []
             for (let i = 0; i < 5; i++) {
                 novosTimes.push({
-                    nome: nomesEquipes[i],
+                    nome: timesConfig[i].nome,
                     equipe_id: crypto.randomUUID(), // Gerar ID UUID v4 manual para relacionar
                     jogadores: [],
-                    posicao: ''
+                    posicao: '',
+                    logo_url: timesConfig[i]?.logo_url || ''
                 })
             }
 
@@ -123,7 +131,8 @@ export default function Sorteio() {
                 const { error: eqErr } = await supabase.from('equipes').insert({
                     id: time.equipe_id,
                     nome: time.nome,
-                    posicao: time.posicao
+                    posicao: time.posicao,
+                    logo_url: time.logo_url
                 })
                 if (eqErr) throw eqErr
 
@@ -156,10 +165,11 @@ export default function Sorteio() {
             if (jogosErr) throw jogosErr
 
             // 6. Ativar chaveamento e salvar fase no torneio_config
-            await supabase.from('torneio_config').update({
+            await supabase.from('torneio_config').upsert({
+                id: 1,
                 chaveamento_gerado: true,
                 fase_atual: 'abertura',
-            }).eq('id', 1)
+            })
 
             toast.success('🎉 Sorteio e Chaveamento concluídos!')
             recarregarTorneio()
@@ -179,11 +189,12 @@ export default function Sorteio() {
         setSalvando(true)
         try {
             // Volta configuração de chaveamento
-            await supabase.from('torneio_config').update({
+            await supabase.from('torneio_config').upsert({
+                id: 1,
                 chaveamento_gerado: false,
                 fase_atual: null,
                 campeao_id: null
-            }).eq('id', 1)
+            })
 
             // Limpa chave estrangeira dos jogadores (desvincular equipes)
             await supabase.from('jogadores').update({ equipe_id: null }).not('id', 'is', null)
@@ -253,6 +264,7 @@ export default function Sorteio() {
                     <PlayerList
                         players={homens}
                         globalPlayers={jogadores}
+                        titularesIds={titularesIds}
                         isLocked={!!config?.chaveamento_gerado}
                         onToggleStar={toggleCabecaChave}
                     />
@@ -266,6 +278,7 @@ export default function Sorteio() {
                     <PlayerList
                         players={mulheres}
                         globalPlayers={jogadores}
+                        titularesIds={titularesIds}
                         isLocked={!!config?.chaveamento_gerado}
                         onToggleStar={toggleCabecaChave}
                     />
@@ -278,11 +291,13 @@ export default function Sorteio() {
 function PlayerList({
     players,
     globalPlayers,
+    titularesIds,
     isLocked,
     onToggleStar
 }: {
     players: Jogador[],
     globalPlayers: Jogador[],
+    titularesIds: Set<string>,
     isLocked: boolean,
     onToggleStar: (j: Jogador) => void
 }) {
@@ -294,7 +309,7 @@ function PlayerList({
         <div className="space-y-2">
             {players.map((j) => {
                 const globalIndex = globalPlayers.findIndex(globalP => globalP.id === j.id)
-                const isTitular = globalIndex !== -1 && globalIndex < 20
+                const isTitular = titularesIds.has(j.id)
 
                 return (
                     <div
