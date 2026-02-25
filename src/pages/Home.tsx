@@ -16,7 +16,7 @@ export default function Home() {
             <section className="text-center py-10 sm:py-16">
                 <p className="text-gray-500 text-xs tracking-widest uppercase mb-3">IEQ JD Portugal</p>
                 <h1 className="font-syne text-4xl sm:text-6xl font-extrabold text-white mb-4 leading-tight">
-                    1º Torneio de<br />
+                    1º Mini Torneio de<br />
                     <span className="text-[#f5a623]">Vôlei de Areia</span>
                 </h1>
                 <p className="text-gray-400 max-w-md mx-auto mb-8 text-sm sm:text-base">
@@ -87,7 +87,7 @@ export default function Home() {
                         </h2>
 
                         {/* Ranking ordenado: classificados primeiro, depois em jogo */}
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[...equipes]
                                 .sort((a, b) => {
                                     const pa = a.colocacao_final ? Number(a.colocacao_final) : 999
@@ -106,73 +106,77 @@ export default function Home() {
                                     return (
                                         <div
                                             key={eq.id}
-                                            className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${posNum === 1
-                                                    ? 'bg-[#f5a623]/10 border-[#f5a623]/40 shadow-[0_0_20px_rgba(245,166,35,0.15)]'
-                                                    : posNum === 2
-                                                        ? 'bg-[#c0c0c0]/10 border-[#c0c0c0]/30'
-                                                        : posNum === 3
-                                                            ? 'bg-[#cd7f32]/10 border-[#cd7f32]/30'
-                                                            : emJogo
-                                                                ? 'bg-[#111827] border-blue-500/20'
-                                                                : 'bg-[#0d1117] border-[#1e2d40] opacity-70'
+                                            className={`flex flex-col gap-4 p-5 rounded-3xl border transition-all ${posNum === 1
+                                                ? 'bg-[#f5a623]/10 border-[#f5a623]/40 shadow-[0_0_20px_rgba(245,166,35,0.15)]'
+                                                : posNum === 2
+                                                    ? 'bg-[#c0c0c0]/10 border-[#c0c0c0]/30'
+                                                    : posNum === 3
+                                                        ? 'bg-[#cd7f32]/10 border-[#cd7f32]/30'
+                                                        : emJogo
+                                                            ? 'bg-[#111827] border-blue-500/20'
+                                                            : 'bg-[#0d1117] border-[#1e2d40] opacity-70'
                                                 }`}
                                         >
-                                            {/* Posição */}
-                                            <div className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl font-bold text-lg ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
+                                            <div className="flex items-center gap-4">
+                                                {/* Posição */}
+                                                <div className={`w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl font-bold text-xl ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
                                                     : posNum === 2 ? 'bg-[#c0c0c0]/20 text-[#c0c0c0]'
                                                         : posNum === 3 ? 'bg-[#cd7f32]/20 text-[#cd7f32]'
                                                             : 'bg-[#1e2d40] text-gray-400'
-                                                }`}>
-                                                {medalha}
-                                            </div>
-
-                                            {/* Logo */}
-                                            {eq.logo_url ? (
-                                                <img src={eq.logo_url} alt={eq.nome} className={`w-10 h-10 object-contain shrink-0 ${isEliminado && posNum !== 1 && posNum !== 2 ? 'grayscale opacity-50' : ''}`} />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
-                                                    {eq.nome[0]}
-                                                </div>
-                                            )}
-
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className={`font-syne font-bold text-sm truncate ${posNum === 1 ? 'text-[#f5a623]' : isEliminado ? 'text-gray-500' : 'text-white'
                                                     }`}>
-                                                    {eq.nome}
-                                                </h3>
-                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                    {emJogo && (
-                                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">🎮 Em jogo</span>
-                                                    )}
-                                                    {col && !emJogo && (
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
+                                                    {medalha}
+                                                </div>
+
+                                                {/* Logo */}
+                                                {eq.logo_url ? (
+                                                    <img src={eq.logo_url} alt={eq.nome} className={`w-12 h-12 object-contain shrink-0 ${isEliminado && posNum !== 1 && posNum !== 2 ? 'grayscale opacity-50' : ''}`} />
+                                                ) : (
+                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                                                        {eq.nome[0]}
+                                                    </div>
+                                                )}
+
+                                                {/* Info Header */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className={`font-syne font-bold text-base truncate ${posNum === 1 ? 'text-[#f5a623]' : isEliminado ? 'text-gray-500' : 'text-white'
+                                                        }`}>
+                                                        {eq.nome}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        {emJogo && (
+                                                            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Em jogo</span>
+                                                        )}
+                                                        {col && !emJogo && (
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
                                                                 : posNum === 2 ? 'bg-[#c0c0c0]/20 text-[#c0c0c0]'
                                                                     : posNum === 3 ? 'bg-[#cd7f32]/20 text-[#cd7f32]'
-                                                                        : 'bg-red-500/10 text-red-400'
-                                                            }`}>
-                                                            {col.texto}
-                                                        </span>
-                                                    )}
-                                                    {/* Victoria Count */}
-                                                    {isTop3 && (
-                                                        <span className="text-[10px] text-gray-500">
-                                                            Seed {eq.seed ?? '—'}
-                                                        </span>
-                                                    )}
+                                                                        : 'bg-red-500/10 text-red-500'
+                                                                }`}>
+                                                                {col.texto}
+                                                            </span>
+                                                        )}
+                                                        {isTop3 && (
+                                                            <span className="text-[10px] text-gray-500 font-medium">
+                                                                Seed {eq.seed ?? '—'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            {/* Jogadores mini-lista */}
-                                            <div className="hidden sm:flex flex-col gap-0.5 max-w-[140px]">
-                                                {jogadores.filter(j => j.equipe_id === eq.id).slice(0, 3).map(j => (
-                                                    <span key={j.id} className="text-[10px] text-gray-500 truncate">
-                                                        {j.genero === 'M' ? '👨' : j.genero === 'F' ? '👩' : '👤'} {j.nome}
-                                                    </span>
-                                                ))}
-                                                {jogadores.filter(j => j.equipe_id === eq.id).length > 3 && (
-                                                    <span className="text-[10px] text-gray-600">+{jogadores.filter(j => j.equipe_id === eq.id).length - 3} mais</span>
-                                                )}
+                                            {/* Grid Jogadores (Completa) */}
+                                            <div className="bg-[#050910]/40 rounded-xl p-3 border border-[#1e2d40]/40 mt-1">
+                                                <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2 ml-1">Jogadores</h4>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {jogadores.filter(j => j.equipe_id === eq.id).map(j => (
+                                                        <div key={j.id} className="flex items-center gap-1.5 bg-[#111827] px-2 py-1.5 rounded-lg border border-gray-800/60">
+                                                            <span className="text-sm opacity-80">{j.genero === 'M' ? '👨' : j.genero === 'F' ? '👩' : '👤'}</span>
+                                                            <span className={`text-xs truncate font-medium ${isEliminado && posNum !== 1 ? 'text-gray-500' : 'text-gray-300'}`}>
+                                                                {j.nome}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     )
@@ -241,7 +245,7 @@ export default function Home() {
             {/* Regulamento */}
             <section className="mt-16 bg-[#111827] border border-[#1e2d40] rounded-2xl p-6 sm:p-8">
                 <h2 className="font-syne text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                    📋 Regulamento Oficial
+                    📋 Regulamento Oficial - Mini Torneio
                 </h2>
 
                 <div className="space-y-6 text-gray-300 text-sm sm:text-base">
@@ -255,7 +259,6 @@ export default function Home() {
                     <div>
                         <h3 className="text-[#f5a623] font-bold text-lg mb-2">2. Formato das Equipes</h3>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li><strong className="text-white">Modalidade:</strong> Quarteto Misto Rigoroso (4 contra 4).</li>
                             <li><strong className="text-white">Composição:</strong> Para garantir a justiça e o equilíbrio, é obrigatória a presença de exatos 2 (dois) homens e 2 (duas) mulheres em quadra durante toda a partida.</li>
                             <li><strong className="text-white">Substituições:</strong> São livres, desde que a proporção de 2 homens e 2 mulheres na areia seja sempre mantida. A troca deve ser comunicada com antecedência.</li>
                             <li><strong className="text-white">Sorteio:</strong> Os times serão definidos por sorteio equilibrado.</li>
@@ -266,7 +269,7 @@ export default function Home() {
                         <h3 className="text-[#f5a623] font-bold text-lg mb-2">3. Sistema de Disputa (Eliminatória Dupla)</h3>
                         <ul className="list-disc pl-5 space-y-2">
                             <li><strong className="text-white">Garantia de Jogo:</strong> Nenhuma equipe é eliminada após a primeira derrota. Todos têm o direito de jogar no mínimo 2 vezes.</li>
-                            <li><strong className="text-white">Chaveamento:</strong> O torneio é dividido em "Chave dos Vencedores" e "Chave da Repescagem". A equipe só é desclassificada da competição ao sofrer a sua segunda derrota.</li>
+                            <li><strong className="text-white">Chaveamento:</strong> O torneio é dividido em "Chave dos Vencedores" e "Chave da Repescagem". A equipe só é <span className="font-bold text-red-500">desclassificada da competição</span> ao sofrer a sua <span className="font-bold text-red-500">segunda derrota</span>.</li>
                             <li><strong className="text-white">Duração da Partida:</strong> Os jogos serão de Set Único de 10 pontos.</li>
                             <li><strong className="text-white">Vantagem e Ponto Limite:</strong> Para vencer, é preciso abrir 2 pontos de diferença (ex: 11x9). Caso o jogo empate em 11x11, a equipe que marcar o 12º ponto primeiro vence a partida (limite máximo de 12 pontos).</li>
                             <li><strong className="text-white">Troca de Lado:</strong> Como os jogos são curtos, as equipes trocam de lado da quadra apenas uma vez, quando a soma dos pontos das duas equipes chegar a 5 (para equilibrar sol e vento).</li>

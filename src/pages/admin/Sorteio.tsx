@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useTorneio } from '@/hooks/useTorneio'
 import Layout from '@/components/Layout'
-import { IAService, salvarBracket, validarBracketIA } from '@/services/ia.service'
+import { salvarBracket, validarBracketIA } from '@/services/ia.service'
+import { gerarDoubleElimination } from '@/services/bracketGenerator'
 import type { Equipe, BracketCompleto } from '@/types'
 
 export default function Sorteio() {
@@ -53,9 +54,20 @@ export default function Sorteio() {
         setTimesOrdenados(reordenado)
     }
 
-    const gerarComIA = async () => {
-        if (timesParaOrdenar.length < 2) {
-            toast.error('Nenhum time formado. Configure os times primeiro.')
+    const embaralharSeeds = () => {
+        const embaralhado = [...timesParaOrdenar]
+        for (let i = embaralhado.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [embaralhado[i], embaralhado[j]] = [embaralhado[j], embaralhado[i]];
+        }
+        setTimesOrdenados(embaralhado)
+        toast.success('🎲 Times embaralhados!')
+    }
+
+    const gerarBracket = async () => {
+        const n = timesParaOrdenar.length
+        if (n < 5 || n > 10) {
+            toast.error(`Número de times inválido: ${n}. Devem ser entre 5 e 10 times.`)
             return
         }
 
@@ -63,21 +75,20 @@ export default function Sorteio() {
         setBracket(null)
 
         try {
-            // Atualizar seeds dos times conforme a ordem atual
+            // Salvar seeds no banco conforme ordem atual
             const updates = timesParaOrdenar.map((t, i) => ({ id: t.id, seed: i + 1 }))
             for (const upd of updates) {
                 await supabase.from('equipes').update({ seed: upd.seed }).eq('id', upd.id)
             }
 
-            // Montar lista com seeds atualizados
+            // Gerar bracket algoritmicamente (sem IA)
             const timesComSeed: Equipe[] = timesParaOrdenar.map((t, i) => ({ ...t, seed: i + 1 }))
-
-            const resultado = await IAService.gerarTorneio(timesComSeed)
+            const resultado = gerarDoubleElimination(timesComSeed)
             setBracket(resultado)
-            toast.success('🤖 Bracket gerado com sucesso!')
+            toast.success('⚡ Bracket gerado!')
         } catch (err: unknown) {
             const error = err as Error
-            toast.error(`Erro na IA: ${error.message}`)
+            toast.error(`Erro: ${error.message}`)
         } finally {
             setGerando(false)
         }
@@ -161,9 +172,19 @@ export default function Sorteio() {
                         <h2 className="font-syne font-bold text-white mb-1">
                             <span className="text-blue-400 mr-2">1.</span>Ordenar Seeds (drag-and-drop)
                         </h2>
-                        <p className="text-gray-500 text-sm mb-4">
-                            O Seed 1 é o favoritado. Seed 1 vs último, Seed 2 vs penúltimo, etc.
-                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                            <p className="text-gray-500 text-sm">
+                                O Seed 1 é o favoritado. Seed 1 vs último, Seed 2 vs penúltimo, etc.
+                            </p>
+                            {timesParaOrdenar.length > 0 && (
+                                <button
+                                    onClick={embaralharSeeds}
+                                    className="px-4 py-2 bg-[#1e2d40] hover:bg-[#2d3748] text-white text-xs font-bold rounded-lg border border-gray-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    🎲 Embaralhar Aleatoriamente
+                                </button>
+                            )}
+                        </div>
 
                         {timesParaOrdenar.length === 0 ? (
                             <p className="text-gray-500 italic text-sm">
@@ -221,23 +242,23 @@ export default function Sorteio() {
                     </div>
 
                     {/* Passo 2: Gerar com IA */}
-                    {timesParaOrdenar.length >= 2 && (
+                    {timesParaOrdenar.length >= 5 && timesParaOrdenar.length <= 10 && (
                         <div className="bg-[#111827] border border-[#1e2d40] rounded-2xl p-6 mb-6">
                             <h2 className="font-syne font-bold text-white mb-4">
-                                <span className="text-blue-400 mr-2">2.</span>Gerar Bracket com IA
+                                <span className="text-blue-400 mr-2">2.</span>Gerar Bracket
                             </h2>
 
                             <button
-                                onClick={gerarComIA}
+                                onClick={gerarBracket}
                                 disabled={gerando}
                                 className="py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-bold rounded-xl transition-all text-sm flex items-center gap-2"
                             >
                                 {gerando ? (
                                     <>
                                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        A IA está construindo a estrutura...
+                                        Gerando bracket...
                                     </>
-                                ) : '🤖 Gerar Torneio com IA'}
+                                ) : '⚡ Gerar Chaveamento'}
                             </button>
 
                             {gerando && (

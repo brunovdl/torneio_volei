@@ -1,101 +1,191 @@
--- Schema completo para o torneio de vôlei
+-- =====================================================
+-- SCHEMA COMPLETO — Sistema de Torneio de Vôlei v5
+-- Execute este script do zero no Supabase SQL Editor
+-- ⚠️ CUIDADO: DROP TABLE apaga todos os dados!
+-- =====================================================
 
--- 1. Remover tabelas existentes (cuidado em prod)
-DROP TABLE IF EXISTS jogos;
-DROP TABLE IF EXISTS torneio_config;
-DROP TABLE IF EXISTS equipes;
+-- =====================================================
+-- 0. EXTENSÕES
+-- =====================================================
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 2. Tabela de Equipes
-CREATE TABLE equipes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  nome TEXT NOT NULL,
-  responsavel TEXT NOT NULL,
-  email TEXT NOT NULL,
-  whatsapp TEXT,
-  logo_url TEXT,
-  posicao TEXT CHECK (posicao IN ('T1', 'T2', 'T3', 'T4', 'T5', null)),
-  colocacao_final TEXT CHECK (colocacao_final IN ('1', '2', '3', '4', '5', null)),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- =====================================================
+-- 1. DROP (ordem reversa para evitar conflitos de FK)
+-- =====================================================
+DROP TABLE IF EXISTS ia_log       CASCADE;
+DROP TABLE IF EXISTS jogos        CASCADE;
+DROP TABLE IF EXISTS jogadores    CASCADE;
+DROP TABLE IF EXISTS equipes      CASCADE;
+DROP TABLE IF EXISTS torneio_config CASCADE;
 
--- 3. Tabela de Jogos
-CREATE TABLE jogos (
-  id INTEGER PRIMARY KEY CHECK (id BETWEEN 1 AND 9),
-  rodada TEXT NOT NULL,
-  tipo TEXT NOT NULL,
-  label TEXT NOT NULL,
-  equipe_a_id UUID REFERENCES equipes(id) ON DELETE SET NULL,
-  equipe_b_id UUID REFERENCES equipes(id) ON DELETE SET NULL,
-  vencedor_id UUID REFERENCES equipes(id) ON DELETE SET NULL,
-  perdedor_id UUID REFERENCES equipes(id) ON DELETE SET NULL,
-  placar_a INTEGER,
-  placar_b INTEGER,
-  status TEXT NOT NULL DEFAULT 'aguardando' CHECK (status IN ('aguardando', 'em_andamento', 'finalizado')),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 4. Tabela de Configuração (sempre 1 única linha)
+-- =====================================================
+-- 2. torneio_config
+-- =====================================================
 CREATE TABLE torneio_config (
-  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  chaveamento_gerado BOOLEAN DEFAULT false,
-  ao_vivo BOOLEAN DEFAULT false,
-  fase_atual TEXT,
-  campeao_id UUID REFERENCES equipes(id) ON DELETE SET NULL
+  id                  INT PRIMARY KEY DEFAULT 1,
+  nome                TEXT DEFAULT 'Torneio de Vôlei',
+  data_evento         DATE,
+  inscricoes_abertas  BOOLEAN DEFAULT TRUE,
+  jogadores_por_time  INT CHECK (jogadores_por_time BETWEEN 2 AND 6),
+  num_times_definido  INT,
+  times_formados      BOOLEAN DEFAULT FALSE,
+  chaveamento_gerado  BOOLEAN DEFAULT FALSE,
+  ao_vivo             BOOLEAN DEFAULT FALSE,
+  fase_atual          TEXT DEFAULT 'inscricoes',
+  campeao_id          UUID,                    -- FK adicionada depois de equipes
+  bracket_resumo_ia   TEXT,
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
 );
 
--- INSERIR LINHA ÚNICA NA CONFIG
-INSERT INTO torneio_config (id) VALUES (1);
+INSERT INTO torneio_config (id, chaveamento_gerado, ao_vivo, fase_atual, inscricoes_abertas, times_formados)
+VALUES (1, FALSE, FALSE, 'inscricoes', TRUE, FALSE);
 
--- INSERIR OS 9 JOGOS BASE
-INSERT INTO jogos (id, rodada, tipo, label) VALUES
-  (1, 'abertura', 'vencedores', 'Jogo 1 · Abertura'),
-  (2, 'abertura', 'vencedores', 'Jogo 2 · Abertura'),
-  (3, 'segunda', 'vencedores', 'Jogo 3 · Chave Vencedores'),
-  (4, 'segunda', 'repescagem', 'Jogo 4 · Repescagem'),
-  (5, 'terceira', 'vencedores', 'Jogo 5 · Final Vencedores'),
-  (6, 'terceira', 'repescagem', 'Jogo 6 · Repescagem'),
-  (7, 'semifinal', 'semifinal', 'Jogo 7 · Semifinal'),
-  (8, 'final', 'final', 'Jogo 8 · Grande Final'),
-  (9, 'final', 'desempate', 'Jogo 9 · Desempate');
+-- =====================================================
+-- 3. equipes
+-- =====================================================
+CREATE TABLE equipes (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome                TEXT NOT NULL,
+  logo_url            TEXT,
+  posicao             TEXT,
+  seed                INT,
+  num_derrotas        INT DEFAULT 0,
+  eliminado           BOOLEAN DEFAULT FALSE,
+  colocacao_final     TEXT,
+  misto_valido        BOOLEAN DEFAULT FALSE,
+  total_masculino     INT DEFAULT 0,
+  total_feminino      INT DEFAULT 0,
+  total_nao_informado INT DEFAULT 0,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
 
--- 5. Trigger para updated_at automático na tabela de jogos
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- FK de torneio_config → equipes (após criar equipes)
+ALTER TABLE torneio_config
+  ADD CONSTRAINT torneio_config_campeao_id_fkey
+  FOREIGN KEY (campeao_id) REFERENCES equipes(id) ON DELETE SET NULL;
+
+-- =====================================================
+-- 4. jogadores
+-- =====================================================
+CREATE TABLE jogadores (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome               TEXT NOT NULL,
+  apelido            TEXT,
+  email              TEXT,
+  whatsapp           TEXT,
+  genero             TEXT NOT NULL DEFAULT 'nao_informado',
+  posicao            TEXT,
+  foto_url           TEXT,
+  equipe_id          UUID REFERENCES equipes(id) ON DELETE SET NULL,
+  cabeca_de_chave    BOOLEAN DEFAULT FALSE,
+  is_cabeca_de_chave BOOLEAN DEFAULT FALSE,
+  lista_espera       BOOLEAN DEFAULT FALSE,
+  created_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índice único no email (ignora nulos e vazios)
+CREATE UNIQUE INDEX jogadores_email_unique
+  ON jogadores (email)
+  WHERE email IS NOT NULL AND email <> '';
+
+-- =====================================================
+-- 5. jogos
+-- =====================================================
+CREATE TABLE jogos (
+  id                        INT PRIMARY KEY,
+  numero_jogo               INT,
+  rodada                    TEXT,
+  tipo                      TEXT,
+  chave                     TEXT,
+  is_bye                    BOOLEAN DEFAULT FALSE,
+  label                     TEXT,
+  descricao                 TEXT,
+  ordem_exibicao            INT,
+  equipe_a_id               UUID REFERENCES equipes(id) ON DELETE SET NULL,
+  equipe_b_id               UUID REFERENCES equipes(id) ON DELETE SET NULL,
+  vencedor_id               UUID REFERENCES equipes(id) ON DELETE SET NULL,
+  perdedor_id               UUID REFERENCES equipes(id) ON DELETE SET NULL,
+  placar_a                  INT,
+  placar_b                  INT,
+  status                    TEXT DEFAULT 'aguardando'
+                              CHECK (status IN ('aguardando', 'em_andamento', 'finalizado')),
+  proximo_jogo_vencedor_id  INT REFERENCES jogos(id) ON DELETE SET NULL,
+  proximo_jogo_perdedor_id  INT REFERENCES jogos(id) ON DELETE SET NULL,
+  slot_vencedor             TEXT CHECK (slot_vencedor IN ('equipe_a_id', 'equipe_b_id')),
+  slot_perdedor             TEXT CHECK (slot_perdedor IN ('equipe_a_id', 'equipe_b_id')),
+  updated_at                TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trigger: atualiza updated_at automaticamente
+CREATE OR REPLACE FUNCTION _set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-   NEW.updated_at = NOW();
-   RETURN NEW;
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
-CREATE TRIGGER update_jogos_modtime
-BEFORE UPDATE ON jogos
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_jogos_updated_at
+  BEFORE UPDATE ON jogos
+  FOR EACH ROW EXECUTE FUNCTION _set_updated_at();
 
--- =========================================
--- POLITICAS DE SEGURANÇA BÁSICAS (RLS)
--- =========================================
+-- =====================================================
+-- 6. ia_log
+-- =====================================================
+CREATE TABLE ia_log (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo_chamada   TEXT,
+  modelo_usado   TEXT,
+  prompt_sistema TEXT,
+  prompt_usuario TEXT,
+  resposta       TEXT,
+  tokens_entrada INT,
+  tokens_saida   INT,
+  tentativa      INT DEFAULT 1,
+  sucesso        BOOLEAN,
+  erro_validacao TEXT,
+  duracao_ms     INT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Habilitar RLS
-ALTER TABLE equipes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE jogos ENABLE ROW LEVEL SECURITY;
+-- =====================================================
+-- 7. ÍNDICES
+-- =====================================================
+CREATE INDEX jogos_status_idx     ON jogos    (status);
+CREATE INDEX jogos_ordem_idx      ON jogos    (ordem_exibicao);
+CREATE INDEX jogadores_equipe_idx ON jogadores (equipe_id);
+CREATE INDEX ia_log_tipo_idx      ON ia_log   (tipo_chamada);
+CREATE INDEX ia_log_created_idx   ON ia_log   (created_at DESC);
+
+-- =====================================================
+-- 8. ROW LEVEL SECURITY
+-- =====================================================
+ALTER TABLE jogadores    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipes      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE jogos        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE torneio_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ia_log       ENABLE ROW LEVEL SECURITY;
 
--- Equipes: leitura pública. Apenas anônimos/auth podem inserir. Up/Del só admin (auth)
-CREATE POLICY "Leitura pública equips" ON equipes FOR SELECT USING (true);
-CREATE POLICY "Inserção pública equips" ON equipes FOR INSERT WITH CHECK (true);
-CREATE POLICY "Admin pode tudo equips" ON equipes FOR ALL USING (auth.role() = 'authenticated');
+-- Leitura pública
+CREATE POLICY "pub_sel_jogadores"     ON jogadores    FOR SELECT USING (true);
+CREATE POLICY "pub_sel_equipes"       ON equipes      FOR SELECT USING (true);
+CREATE POLICY "pub_sel_jogos"         ON jogos        FOR SELECT USING (true);
+CREATE POLICY "pub_sel_config"        ON torneio_config FOR SELECT USING (true);
 
--- Jogos: leitura pública. Up/Del só admin.
-CREATE POLICY "Leitura pública jogos" ON jogos FOR SELECT USING (true);
-CREATE POLICY "Admin pode tudo jogos" ON jogos FOR ALL USING (auth.role() = 'authenticated');
+-- Escrita pública (torneio sem autenticação — use anon key no front-end)
+CREATE POLICY "pub_ins_jogadores"     ON jogadores    FOR INSERT WITH CHECK (true);
+CREATE POLICY "pub_all_equipes"       ON equipes      FOR ALL    USING (true);
+CREATE POLICY "pub_all_jogos"         ON jogos        FOR ALL    USING (true);
+CREATE POLICY "pub_all_config"        ON torneio_config FOR ALL  USING (true);
+CREATE POLICY "pub_all_ia_log"        ON ia_log       FOR ALL    USING (true);
+CREATE POLICY "pub_upd_jogadores"     ON jogadores    FOR UPDATE USING (true);
+CREATE POLICY "pub_del_jogadores"     ON jogadores    FOR DELETE USING (true);
 
--- Config: leitura pública. Up/Del só admin.
-CREATE POLICY "Leitura pública config" ON torneio_config FOR SELECT USING (true);
-CREATE POLICY "Admin pode tudo config" ON torneio_config FOR ALL USING (auth.role() = 'authenticated');
-
--- STORAGE (Crie o bucket "logos" manualmente nas configs do Supabase e coloque como Público)
--- Ou execute via script:
--- insert into storage.buckets (id, name, public) values ('logos', 'logos', true);
--- create policy "Leitura publica" on storage.objects for select using ( bucket_id = 'logos' );
--- create policy "Insert publico" on storage.objects for insert with check ( bucket_id = 'logos' );
+-- =====================================================
+-- 9. REALTIME
+-- =====================================================
+BEGIN;
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime FOR TABLE
+    jogadores, equipes, jogos, torneio_config;
+COMMIT;

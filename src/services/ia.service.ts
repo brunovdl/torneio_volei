@@ -44,47 +44,18 @@ const DistribuicaoTimesSchema = z.object({
     justificativa: z.string().optional().default(''),
     avisos: z.array(z.string()).optional().default([]),
 })
+// ProximoJogoSchema e BracketCompletoSchema removidos — bracket é gerado algoritmicamente
 
-const ProximoJogoSchema = z.object({
-    numero_jogo: z.number(),
-    slot: z.enum(['a', 'b']),
-}).nullable()
 
-const JogoIASchema = z.object({
-    numero_jogo: z.number(),
-    rodada: z.number(),
-    chave: z.string(),
-    is_bye: z.boolean().optional().default(false),
-    time_a_id: z.string().nullable(),
-    time_b_id: z.string().nullable(),
-    proximo_jogo_vencedor: ProximoJogoSchema,
-    proximo_jogo_perdedor: ProximoJogoSchema,
-    descricao: z.string().optional().default(''),
-})
-
-const BracketCompletoSchema = z.object({
-    total_times: z.number(),
-    total_jogos: z.number(),
-    tem_jogo_decisivo: z.boolean(),
-    resumo: z.string().optional().default(''),
-    jogos: z.array(JogoIASchema),
-    colocacoes: z.array(z.object({
-        posicao: z.number(),
-        descricao: z.string(),
-    })).optional().default([]),
-    ordem_sugerida_jogos: z.array(z.number()).optional().default([]),
-    validacoes: z.object({
-        todos_times_jogam_minimo_2: z.boolean(),
-        nenhum_confronto_repetido_precocemente: z.boolean().optional().default(true),
-        grande_final_correta: z.boolean(),
-        jogo_decisivo_necessario: z.boolean(),
-    }).optional().default({
-        todos_times_jogam_minimo_2: true,
-        nenhum_confronto_repetido_precocemente: true,
-        grande_final_correta: true,
-        jogo_decisivo_necessario: false,
-    }),
-})
+// Helper para embaralhar um array (Fisher-Yates)
+function shuffleArray<T>(array: T[]): T[] {
+    const arr = [...array]
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr
+}
 
 // =====================================================
 // PROMPTS
@@ -92,6 +63,7 @@ const BracketCompletoSchema = z.object({
 
 function buildSistemaDivisaoPrompt(): string {
     return `Você é um assistente especializado em organização de torneios esportivos de vôlei.
+Sua missão é agrupar os jogadores de forma ALEATÓRIA e equilibrada. NÃO USE ORDEM ALFABÉTICA.
 Retorne APENAS JSON válido. Sem texto, sem markdown, sem comentários fora do JSON.`
 }
 
@@ -124,17 +96,18 @@ function buildUsuarioDivisaoPrompt(
 
 REGRAS OBRIGATÓRIAS:
 1. Cabeças de chave são IMUTÁVEIS — não os mova de seus times.
-2. Cada time deve ter ao menos 1 masculino E 1 feminino (obrigatório).
+2. Cada time deve ter ao menos 2 masculino E 2 feminino (obrigatório).
 3. Jogadores "nao_informado" não satisfazem a cota de gênero.
 4. Equilibre posições: prefira 1 levantador por time se possível.
 5. Distribua gêneros proporcionalmente além do mínimo obrigatório.
 6. Excedentes vão para lista_espera (prefira o gênero com mais excedente).
+7. DISTRIBUA OS SELECIONADOS DE FORMA 100% ALEATÓRIA. MISTURE O MÁXIMO POSSÍVEL, NÃO AGRUPE POR ORDEM ALFABÉTICA OU SEQUENCIAL.
 
 TIMES E CABEÇAS DE CHAVE FIXOS:
 ${JSON.stringify(cabecasFixos, null, 2)}
 
-JOGADORES DISPONÍVEIS:
-${JSON.stringify(jogadoresParaIa, null, 2)}
+JOGADORES DISPONÍVEIS (já embaralhados):
+${JSON.stringify(shuffleArray(jogadoresParaIa), null, 2)}
 
 RETORNE APENAS ESTE JSON:
 {
@@ -152,94 +125,9 @@ RETORNE APENAS ESTE JSON:
 }`
 }
 
-function buildSistemaGeracaoTorneioPrompt(): string {
-    return `Você é um especialista em estruturação de torneios esportivos no formato de eliminatória dupla (double elimination).
-Sua tarefa é gerar a estrutura completa de jogos de um torneio dado um número de times.
-Retorne APENAS um objeto JSON válido. Nenhum texto fora do JSON. Nenhum bloco markdown.
-O JSON será processado diretamente por um sistema — qualquer texto extra causará erro fatal.`
-}
+// buildSistemaGeracaoTorneioPrompt e buildUsuarioGeracaoTorneioPrompt
+// foram removidas — a geração de bracket agora é algorítmica (bracketGenerator.ts)
 
-function buildUsuarioGeracaoTorneioPrompt(times: Equipe[]): string {
-    const timesParaIA = times.map((t, i) => ({
-        id: t.id,
-        nome: t.nome,
-        seed: t.seed ?? (i + 1),
-    }))
-
-    return `Gere a estrutura completa de jogos para um torneio de eliminatória dupla com os times abaixo.
-
-════════════════════════════════════════════════
-TIMES PARTICIPANTES (em ordem de seed)
-════════════════════════════════════════════════
-
-${JSON.stringify(timesParaIA, null, 2)}
-
-════════════════════════════════════════════════
-REGRAS DO TORNEIO — TODAS OBRIGATÓRIAS
-════════════════════════════════════════════════
-
-REGRA 1 — ELIMINATÓRIA DUPLA:
-- Todo time que perde pela PRIMEIRA vez vai para a Repescagem (Losers Bracket).
-- Todo time que perde pela SEGUNDA vez está ELIMINADO definitivamente.
-- As duas chaves correm em paralelo e se encontram na Grande Final.
-
-REGRA 2 — MÍNIMO DE 2 JOGOS POR TIME:
-- Nenhum time pode ser eliminado sem ter jogado pelo menos 2 partidas.
-- BYES (folgas) NÃO contam como partida jogada.
-
-REGRA 3 — BYES:
-- Insira byes na 1ª rodada da Chave Vencedores para equilibrar o bracket.
-- Times com seed menor recebem os byes preferencialmente.
-- Marque jogos de bye com "is_bye": true e apenas "time_a_id" preenchido.
-- "time_b_id" deve ser null para byes.
-
-REGRA 4 — 1ª RODADA: seed 1 vs seed N, seed 2 vs seed N-1, etc.
-
-REGRA 5 — GRANDE FINAL:
-- O vencedor da Chave Vencedores enfrenta o vencedor da Repescagem.
-- Se o time invicto ganhar → CAMPEÃO DIRETO.
-- Se o time da repescagem ganhar → jogo decisivo (chave: "decisivo").
-
-REGRA 6 — PROGRESSÃO: informe proximo_jogo_vencedor e proximo_jogo_perdedor para cada jogo.
-
-REGRA 7 — NUMERAÇÃO: sequencial a partir de 1, em ordem cronológica.
-
-════════════════════════════════════════════════
-SCHEMA DE RETORNO (JSON puro — sem nada mais)
-════════════════════════════════════════════════
-
-{
-  "total_times": ${timesParaIA.length},
-  "total_jogos": <número>,
-  "tem_jogo_decisivo": <boolean>,
-  "resumo": "Descrição breve da estrutura gerada",
-  "jogos": [
-    {
-      "numero_jogo": 1,
-      "rodada": 1,
-      "chave": "vencedores",
-      "is_bye": false,
-      "time_a_id": "<uuid>",
-      "time_b_id": "<uuid>",
-      "proximo_jogo_vencedor": { "numero_jogo": 3, "slot": "a" },
-      "proximo_jogo_perdedor": { "numero_jogo": 4, "slot": "a" },
-      "descricao": "Seed 1 vs Seed ${timesParaIA.length}"
-    }
-  ],
-  "colocacoes": [
-    { "posicao": 1, "descricao": "Campeão" },
-    { "posicao": 2, "descricao": "Vice" },
-    { "posicao": 3, "descricao": "3º Lugar" }
-  ],
-  "ordem_sugerida_jogos": [1, 2, 3, ...],
-  "validacoes": {
-    "todos_times_jogam_minimo_2": true,
-    "nenhum_confronto_repetido_precocemente": true,
-    "grande_final_correta": true,
-    "jogo_decisivo_necessario": <boolean>
-  }
-}`
-}
 
 // =====================================================
 // VALIDAÇÃO DO BRACKET
@@ -380,77 +268,22 @@ export const IAService = {
         throw new Error('Falha inesperada na divisão de times')
     },
 
+    // gerarTorneio removido — use gerarDoubleElimination() de bracketGenerator.ts
+    // A IA é exclusivamente para dividirTimes.
+
     /**
-     * Fase 4: Gerar a estrutura completa do torneio
+     * REMOVIDO — placeholder para evitar erros de import legados
+     * @deprecated use gerarDoubleElimination() de bracketGenerator.ts
      */
-    async gerarTorneio(times: Equipe[]): Promise<BracketCompleto> {
-        const systemPrompt = buildSistemaGeracaoTorneioPrompt()
-        const userPrompt = buildUsuarioGeracaoTorneioPrompt(times)
-
-        let ultimoErro = ''
-        for (let tentativa = 1; tentativa <= 3; tentativa++) {
-            const inicio = Date.now()
-            let resposta = ''
-            let sucesso = false
-            let erroValidacao: string | null = null
-
-            try {
-                const promptFinal = tentativa > 1
-                    ? `[RETRY — ERRO NA GERAÇÃO ANTERIOR]\nA estrutura gerada anteriormente falhou na validação:\n"${ultimoErro}"\n\nPor favor, corrija e gere novamente. Os times e regras são os mesmos informados anteriormente.\n\n${userPrompt}`
-                    : userPrompt
-
-                resposta = await this._chamarModelo(systemPrompt, promptFinal, tentativa)
-                const bracket = this._parsearJSON(resposta, BracketCompletoSchema) as BracketCompleto
-
-                // Validação semântica do bracket
-                const validacao = validarBracketIA(bracket, times)
-                if (!validacao.valido) {
-                    ultimoErro = validacao.erros.join('; ')
-                    throw new Error(`Bracket inválido: ${ultimoErro}`)
-                }
-
-                sucesso = true
-
-                await this._registrarLog({
-                    tipo_chamada: tentativa > 1 ? 'retry' : 'geracao_torneio',
-                    modelo_usado: 'openai/gpt-oss-120b',
-                    prompt_sistema: systemPrompt,
-                    prompt_usuario: promptFinal,
-                    resposta,
-                    tentativa,
-                    sucesso: true,
-                    duracao_ms: Date.now() - inicio,
-                })
-
-                return bracket
-            } catch (err: unknown) {
-                const error = err as Error
-                ultimoErro = error.message
-                erroValidacao = error.message
-                sucesso = false
-
-                await this._registrarLog({
-                    tipo_chamada: tentativa > 1 ? 'retry' : 'geracao_torneio',
-                    modelo_usado: 'openai/gpt-oss-120b',
-                    prompt_sistema: systemPrompt,
-                    prompt_usuario: userPrompt,
-                    resposta,
-                    tentativa,
-                    sucesso,
-                    erro_validacao: erroValidacao,
-                    duracao_ms: Date.now() - inicio,
-                })
-
-                if (tentativa === 3) throw new Error(`Falha após 3 tentativas: ${ultimoErro}`)
-            }
-        }
-
-        throw new Error('Falha inesperada na geração do torneio')
+    async gerarTorneio(_times: Equipe[]): Promise<BracketCompleto> {
+        throw new Error('gerarTorneio foi removido. Use gerarDoubleElimination() de bracketGenerator.ts')
     },
+
 
     /**
    * Interno: chama o Groq diretamente no client (desenvolvimento) ou via proxy /api/ia (produção Vercel)
    */
+
     async _chamarModelo(
         systemPrompt: string,
         userPrompt: string,

@@ -28,7 +28,8 @@ export interface Jogador {
 
 // ----- Equipe (Time) -----
 
-export type ColocacaoFinal = '1' | '2' | '3' | '4' | '5' | null
+// ColocacaoFinal aceita qualquer número como string (N times dinâmico)
+export type ColocacaoFinal = string | null
 
 export interface Equipe {
     id: string
@@ -89,14 +90,9 @@ export type FaseAtual =
     | 'sorteio'
     | 'geracao_ia'
     | 'em_andamento'
-    | 'encerrado'
-    // legado
-    | 'abertura'
-    | 'segunda'
-    | 'terceira'
-    | 'semifinal'
     | 'grande_final'
-    | 'desempate'
+    | 'encerrado'
+    | string  // aceita valorés livres do banco
 
 export interface TorneioConfig {
     id: number

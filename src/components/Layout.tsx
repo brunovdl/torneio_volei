@@ -42,7 +42,7 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
                     <Link to="/" className="flex items-center gap-2 shrink-0">
                         <span className="text-2xl">🏐</span>
                         <span className="font-syne font-bold text-white hidden sm:block text-lg leading-tight">
-                            Torneio IEQ
+                            1º Mini Torneio de Vôlei
                         </span>
                     </Link>
 
