@@ -7,6 +7,8 @@ import Layout from '@/components/Layout'
 export default function Equipes() {
     const { equipes, config, recarregar } = useTorneio()
     const [removendo, setRemovendo] = useState<string | null>(null)
+    const [editando, setEditando] = useState<string | null>(null)
+    const [novoNome, setNovoNome] = useState('')
 
     const remover = async (id: string, nome: string) => {
         if (!confirm(`Tem certeza que deseja remover "${nome}"?`)) return
@@ -17,6 +19,24 @@ export default function Equipes() {
             toast.error('Erro ao remover equipe')
         } else {
             toast.success(`${nome} removida`)
+            recarregar()
+        }
+    }
+
+    const iniciarEdicao = (eq: any) => {
+        setEditando(eq.id)
+        setNovoNome(eq.nome)
+    }
+
+    const salvarEdicao = async (id: string) => {
+        if (!novoNome.trim()) return
+
+        const { error } = await supabase.from('equipes').update({ nome: novoNome.trim() }).eq('id', id)
+        if (error) {
+            toast.error('Erro ao atualizar nome')
+        } else {
+            toast.success('Nome atualizado!')
+            setEditando(null)
             recarregar()
         }
     }
@@ -52,11 +72,37 @@ export default function Equipes() {
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-bold text-white">{eq.nome}</p>
-                                    {eq.posicao && (
-                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">
-                                            {eq.posicao}
-                                        </span>
+                                    {editando === eq.id ? (
+                                        <div className="flex gap-2 w-full max-w-sm">
+                                            <input
+                                                autoFocus
+                                                value={novoNome}
+                                                onChange={e => setNovoNome(e.target.value)}
+                                                className="bg-[#1f2937] border border-[#374151] text-white px-3 py-1 rounded focus:outline-none focus:border-blue-500 w-full"
+                                            />
+                                            <button
+                                                onClick={() => salvarEdicao(eq.id)}
+                                                className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-sm font-bold shrink-0"
+                                            >
+                                                Salvar
+                                            </button>
+                                            <button
+                                                onClick={() => setEditando(null)}
+                                                className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm shrink-0"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="font-bold text-white">{eq.nome}</p>
+                                            <button onClick={() => iniciarEdicao(eq)} className="text-gray-500 hover:text-blue-400 text-xs shrink-0 px-2">✏️ Editar</button>
+                                            {eq.posicao && (
+                                                <span className="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold ml-2">
+                                                    {eq.posicao}
+                                                </span>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>

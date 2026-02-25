@@ -20,7 +20,7 @@ export default function Home() {
                     <span className="text-[#f5a623]">Vôlei de Areia</span>
                 </h1>
                 <p className="text-gray-400 max-w-md mx-auto mb-8 text-sm sm:text-base">
-                    Eliminatória dupla · Sorteio equilibrado · 20 vagas titulares
+                    Eliminatória dupla · Times Ilimitados · Sorteio equilibrado dinâmico
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center">
                     {config?.chaveamento_gerado ? (
@@ -46,7 +46,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
                     <StatusCard
                         label="Jogadores Inscritos"
-                        value={`${jogadores.length}/20+`}
+                        value={`${jogadores.length} Cadastrados`}
                         icon="👤"
                         color="blue"
                     />
@@ -77,64 +77,107 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Lista Principal: Equipes (se gerado) ou Jogadores (se não gerado) */}
+            {/* Lista Principal: Ranking (se gerado) ou Jogadores (se não gerado) */}
             <section>
                 {config?.chaveamento_gerado ? (
                     <>
                         <h2 className="font-syne text-xl font-bold text-white mb-4">
-                            Tabela de Equipes
+                            🏆 Classificação Final
+                            <span className="text-gray-500 text-sm font-normal ml-2">({equipes.length} times)</span>
                         </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {equipes.map((eq) => {
-                                const colocacao = getColocacaoLabel(eq.colocacao_final)
-                                // Mostrar jogadores de cada equipe se os dados permitirem
-                                // Por enquanto a query fetchEquipes atualizada será necessária em services/bracket.ts
-                                // Ou podemos simplesmente listar as equipes como antes
-                                return (
-                                    <div
-                                        key={eq.id}
-                                        className="bg-[#111827] border border-[#1e2d40] hover:border-blue-500/40 rounded-xl p-4 transition-all"
-                                    >
-                                        <div className="flex items-center gap-3 mb-3">
+
+                        {/* Ranking ordenado: classificados primeiro, depois em jogo */}
+                        <div className="space-y-3">
+                            {[...equipes]
+                                .sort((a, b) => {
+                                    const pa = a.colocacao_final ? Number(a.colocacao_final) : 999
+                                    const pb = b.colocacao_final ? Number(b.colocacao_final) : 999
+                                    return pa - pb
+                                })
+                                .map((eq, idx) => {
+                                    const posNum = eq.colocacao_final ? Number(eq.colocacao_final) : null
+                                    const col = getColocacaoLabel(eq.colocacao_final ?? null)
+                                    const isTop3 = posNum !== null && posNum <= 3
+                                    const isEliminado = eq.colocacao_final !== null && posNum !== 1
+                                    const emJogo = !eq.colocacao_final
+
+                                    const medalha = posNum === 1 ? '🥇' : posNum === 2 ? '🥈' : posNum === 3 ? '🥉' : posNum ? `${posNum}º` : `#${idx + 1}`
+
+                                    return (
+                                        <div
+                                            key={eq.id}
+                                            className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${posNum === 1
+                                                    ? 'bg-[#f5a623]/10 border-[#f5a623]/40 shadow-[0_0_20px_rgba(245,166,35,0.15)]'
+                                                    : posNum === 2
+                                                        ? 'bg-[#c0c0c0]/10 border-[#c0c0c0]/30'
+                                                        : posNum === 3
+                                                            ? 'bg-[#cd7f32]/10 border-[#cd7f32]/30'
+                                                            : emJogo
+                                                                ? 'bg-[#111827] border-blue-500/20'
+                                                                : 'bg-[#0d1117] border-[#1e2d40] opacity-70'
+                                                }`}
+                                        >
+                                            {/* Posição */}
+                                            <div className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl font-bold text-lg ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
+                                                    : posNum === 2 ? 'bg-[#c0c0c0]/20 text-[#c0c0c0]'
+                                                        : posNum === 3 ? 'bg-[#cd7f32]/20 text-[#cd7f32]'
+                                                            : 'bg-[#1e2d40] text-gray-400'
+                                                }`}>
+                                                {medalha}
+                                            </div>
+
+                                            {/* Logo */}
                                             {eq.logo_url ? (
-                                                <img
-                                                    src={eq.logo_url}
-                                                    alt={eq.nome}
-                                                    className="w-10 h-10 rounded-full object-cover"
-                                                />
+                                                <img src={eq.logo_url} alt={eq.nome} className={`w-10 h-10 object-contain shrink-0 ${isEliminado && posNum !== 1 && posNum !== 2 ? 'grayscale opacity-50' : ''}`} />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-lg font-bold text-white">
-                                                    {eq.nome[0]?.toUpperCase()}
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold shrink-0">
+                                                    {eq.nome[0]}
                                                 </div>
                                             )}
-                                            <div>
-                                                <h3 className="font-semibold text-sm text-white">{eq.nome}</h3>
-                                                {eq.posicao && (
-                                                    <span className="text-[10px] text-gray-500 bg-[#1e2d40] px-2 py-0.5 rounded-full mt-1 inline-block">
-                                                        {eq.posicao}
+
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`font-syne font-bold text-sm truncate ${posNum === 1 ? 'text-[#f5a623]' : isEliminado ? 'text-gray-500' : 'text-white'
+                                                    }`}>
+                                                    {eq.nome}
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                    {emJogo && (
+                                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">🎮 Em jogo</span>
+                                                    )}
+                                                    {col && !emJogo && (
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${posNum === 1 ? 'bg-[#f5a623]/20 text-[#f5a623]'
+                                                                : posNum === 2 ? 'bg-[#c0c0c0]/20 text-[#c0c0c0]'
+                                                                    : posNum === 3 ? 'bg-[#cd7f32]/20 text-[#cd7f32]'
+                                                                        : 'bg-red-500/10 text-red-400'
+                                                            }`}>
+                                                            {col.texto}
+                                                        </span>
+                                                    )}
+                                                    {/* Victoria Count */}
+                                                    {isTop3 && (
+                                                        <span className="text-[10px] text-gray-500">
+                                                            Seed {eq.seed ?? '—'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Jogadores mini-lista */}
+                                            <div className="hidden sm:flex flex-col gap-0.5 max-w-[140px]">
+                                                {jogadores.filter(j => j.equipe_id === eq.id).slice(0, 3).map(j => (
+                                                    <span key={j.id} className="text-[10px] text-gray-500 truncate">
+                                                        {j.genero === 'M' ? '👨' : j.genero === 'F' ? '👩' : '👤'} {j.nome}
                                                     </span>
+                                                ))}
+                                                {jogadores.filter(j => j.equipe_id === eq.id).length > 3 && (
+                                                    <span className="text-[10px] text-gray-600">+{jogadores.filter(j => j.equipe_id === eq.id).length - 3} mais</span>
                                                 )}
                                             </div>
                                         </div>
-                                        {colocacao && (
-                                            <p className="text-xs mt-1 text-center bg-gray-800 rounded-lg p-2 font-medium">{colocacao.emoji} {colocacao.texto}</p>
-                                        )}
-                                        {/* Jogadores da equipe (se disponível e não populamos a query ainda) */}
-                                        <div className="space-y-1 mt-3">
-                                            {jogadores.filter(j => j.equipe_id === eq.id).map(j => (
-                                                <div key={j.id} className="text-xs text-gray-400 flex items-center gap-2">
-                                                    <span>{j.genero === 'M' ? '👨' : '👩'}</span>
-                                                    <span className="truncate">{j.nome}</span>
-                                                    {j.cabeca_de_chave && <span className="text-[#f5a623]" title="Cabeça de Chave">⭐</span>}
-                                                </div>
-                                            ))}
-                                            {jogadores.filter(j => j.equipe_id === eq.id).length === 0 && (
-                                                <p className="text-xs text-gray-600 italic">Nenhum jogador listado...</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })
+                            }
                         </div>
                     </>
                 ) : (

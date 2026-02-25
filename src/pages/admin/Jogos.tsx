@@ -6,12 +6,14 @@ import { useTorneio } from '@/hooks/useTorneio'
 import Layout from '@/components/Layout'
 import type { Jogo } from '@/types'
 
-const FASES_POR_JOGO: Record<number, string> = {
-    1: 'abertura', 2: 'abertura',
-    3: 'segunda', 4: 'segunda',
-    5: 'terceira', 6: 'terceira',
-    7: 'semifinal',
-    8: 'grande_final', 9: 'desempate',
+// Cor do card por chave (dinâmico)
+function getCorPorChave(chave: string | undefined | null): string {
+    if (!chave) return 'blue'
+    if (chave === 'vencedores') return 'blue'
+    if (chave === 'repescagem') return 'red'
+    if (chave === 'final') return 'gold'
+    if (chave === 'decisivo') return 'gold'
+    return 'blue'
 }
 
 export default function Jogos() {
@@ -43,13 +45,13 @@ export default function Jogos() {
 
         setSalvando(true)
 
-        // Atualizar fase atual
-        await supabase
-            .from('torneio_config')
-            .update({ fase_atual: FASES_POR_JOGO[jogo.id] })
+        // Atualizar fase com base na chave
+        const chave = jogo.chave || jogo.tipo || 'em_andamento'
+        await supabase.from('torneio_config')
+            .update({ fase_atual: chave === 'final' || chave === 'decisivo' ? 'grande_final' : 'em_andamento' })
             .eq('id', 1)
 
-        const { error } = await processarResultado({
+        const resultado = await processarResultado({
             jogoId: jogo.id,
             vencedorId: vencedorSel,
             perdedorId,
@@ -59,11 +61,52 @@ export default function Jogos() {
 
         setSalvando(false)
 
-        if (error) {
-            toast.error(`Erro: ${error.message}`)
+        if (resultado.error) {
+            toast.error(`Erro: ${resultado.error.message}`)
         } else {
             toast.success(`✅ Resultado do Jogo ${jogo.id} registrado!`)
             setJogoAtivo(null)
+
+            // Alerta especial de eliminação
+            if (resultado.timeEliminado) {
+                const { nome, posicao, logo_url } = resultado.timeEliminado
+                toast(
+                    (t) => (
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => toast.dismiss(t.id)}>
+                            {logo_url && <img src={logo_url} alt={nome} className="w-8 h-8 object-contain rounded" />}
+                            <div>
+                                <p className="font-bold text-white text-sm">⛔ {nome} eliminado!</p>
+                                <p className="text-xs text-gray-300">{posicao}º lugar no torneio</p>
+                            </div>
+                        </div>
+                    ),
+                    {
+                        duration: 6000,
+                        style: { background: '#1f1f2e', border: '1px solid #ef4444', color: '#fff', minWidth: '260px' },
+                    }
+                )
+            }
+
+            // Alerta de campeão
+            if (resultado.campeao) {
+                const { nome, logo_url } = resultado.campeao
+                toast(
+                    (t) => (
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => toast.dismiss(t.id)}>
+                            {logo_url && <img src={logo_url} alt={nome} className="w-10 h-10 object-contain" />}
+                            <div>
+                                <p className="font-bold text-yellow-400 text-base">🏆 CAMPEÃO!</p>
+                                <p className="text-white font-bold">{nome}</p>
+                            </div>
+                        </div>
+                    ),
+                    {
+                        duration: 10000,
+                        style: { background: '#1a1200', border: '2px solid #f5a623', color: '#fff', minWidth: '280px' },
+                    }
+                )
+            }
+
             recarregar()
         }
     }
@@ -81,10 +124,7 @@ export default function Jogos() {
         }
     }
 
-    const corJogo: Record<number, string> = {
-        1: 'blue', 2: 'blue', 3: 'blue', 5: 'blue',
-        4: 'red', 6: 'red', 7: 'purple', 8: 'gold', 9: 'gold',
-    }
+    // Cor dinâmica por chave do jogo
 
     const borderCor: Record<string, string> = {
         blue: 'border-blue-500/30',
@@ -115,7 +155,7 @@ export default function Jogos() {
             ) : (
                 <div className="space-y-3">
                     {jogos.map(jogo => {
-                        const cor = corJogo[jogo.id] ?? 'blue'
+                        const cor = getCorPorChave(jogo.chave || jogo.tipo)
                         const temEquipes = jogo.equipe_a_id && jogo.equipe_b_id
                         const isAberto = jogoAtivo === jogo.id
 
@@ -123,8 +163,8 @@ export default function Jogos() {
                             <div
                                 key={jogo.id}
                                 className={`rounded-2xl border bg-[#111827] transition-all ${jogo.status === 'finalizado'
-                                        ? 'border-green-500/20'
-                                        : borderCor[cor]
+                                    ? 'border-green-500/20'
+                                    : borderCor[cor]
                                     }`}
                             >
                                 {/* Header do jogo */}
@@ -145,10 +185,10 @@ export default function Jogos() {
 
                                     {/* Status badge */}
                                     <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${jogo.status === 'finalizado'
-                                            ? 'bg-green-500/20 text-green-400'
-                                            : temEquipes
-                                                ? 'bg-yellow-500/20 text-yellow-400'
-                                                : 'bg-gray-700 text-gray-500'
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : temEquipes
+                                            ? 'bg-yellow-500/20 text-yellow-400'
+                                            : 'bg-gray-700 text-gray-500'
                                         }`}>
                                         {jogo.status === 'finalizado' ? '✓ Finalizado' : temEquipes ? 'Pronto' : 'Aguarda'}
                                     </span>
@@ -167,8 +207,8 @@ export default function Jogos() {
                                             onClick={() => isAberto ? setJogoAtivo(null) : abrirJogo(jogo.id)}
                                             disabled={salvando}
                                             className={`text-xs px-3 py-1.5 font-bold rounded-lg transition-all shrink-0 ${isAberto
-                                                    ? 'bg-gray-700 text-gray-300'
-                                                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                                ? 'bg-gray-700 text-gray-300'
+                                                : 'bg-blue-600 hover:bg-blue-500 text-white'
                                                 }`}
                                         >
                                             {isAberto ? 'Fechar' : '+ Resultado'}
@@ -206,8 +246,8 @@ export default function Jogos() {
                                                         key={eq.id}
                                                         onClick={() => setVencedorSel(eq.id)}
                                                         className={`p-3 rounded-xl border-2 text-left transition-all ${vencedorSel === eq.id
-                                                                ? 'border-blue-500 bg-blue-500/10'
-                                                                : 'border-[#374151] hover:border-blue-500/50 bg-[#1f2937]'
+                                                            ? 'border-blue-500 bg-blue-500/10'
+                                                            : 'border-[#374151] hover:border-blue-500/50 bg-[#1f2937]'
                                                             }`}
                                                     >
                                                         <div className="flex items-center gap-2">

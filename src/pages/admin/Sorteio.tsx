@@ -1,353 +1,321 @@
 import { useState } from 'react'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useTorneio } from '@/hooks/useTorneio'
-import { useJogadores } from '@/hooks/useJogadores'
 import Layout from '@/components/Layout'
-import type { Posicao, Jogador } from '@/types'
-
-const POSICOES: Posicao[] = ['T1', 'T2', 'T3', 'T4', 'T5']
+import { IAService, salvarBracket, validarBracketIA } from '@/services/ia.service'
+import type { Equipe, BracketCompleto } from '@/types'
 
 export default function Sorteio() {
-    const { config, recarregar: recarregarTorneio } = useTorneio()
-    const { jogadores, recarregar: recarregarJogadores } = useJogadores()
-    const [salvando, setSalvando] = useState(false)
+    const { config, equipes, recarregar } = useTorneio()
+    const [timesOrdenados, setTimesOrdenados] = useState<Equipe[]>([])
+    const [gerando, setGerando] = useState(false)
+    const [bracket, setBracket] = useState<BracketCompleto | null>(null)
+    const [publicando, setPublicando] = useState(false)
 
-    const homens = jogadores.filter(j => j.genero === 'M')
-    const mulheres = jogadores.filter(j => j.genero === 'F')
-
-    // Calculamos dinamicamente (para preencher times de forma que todo mundo jogue)
-    // Se houverem muitos jogadores, aumentamos o número de times ou distribuimos mais reservas em times.
-    // O pedido original diz "forme os times de acordo com a quantidade de jogadores registrados mantendo os cabeças de chave".
-    // Ou seja: TODOS os inscritos devem entrar em algum time. (Titulares = TODOS)
-    const titulares = [
-        ...jogadores.filter(j => j.cabeca_de_chave),
-        ...jogadores.filter(j => !j.cabeca_de_chave)
-    ]
-    const titularesIds = new Set(titulares.map(t => t.id))
-
-    // Toggles a player's star (cabeça de chave)
-    const toggleCabecaChave = async (jogador: Jogador) => {
-        if (config?.chaveamento_gerado) return
-
-        try {
-            const { error } = await supabase
-                .from('jogadores')
-                .update({ cabeca_de_chave: !jogador.cabeca_de_chave })
-                .eq('id', jogador.id)
-            if (error) throw error
-            recarregarJogadores()
-        } catch (err: any) {
-            toast.error(err.message ?? 'Erro ao atualizar jogador')
-        }
-    }
-
-    const gerarSorteioEChaveamento = async () => {
-        if (config?.chaveamento_gerado) {
-            toast.error('Chaveamento já foi gerado!')
-            return
-        }
-
-        if (jogadores.length === 0) {
-            toast.error('Não há jogadores cadastrados.')
-            return
-        }
-
-        // Define o número de times dinamicamente considerando equipes com ~4, ou no máximo as 5 equipes padrão (já que temos 5 nomes e o chaveamento é para 5).
-        // Na verdade o usuário precisa q os times formem dinamicamente independente.
-        // Espera, o chaveamento original comporta apenas 5 equipes. 
-        // Vamos manter sempre as mesmas 5 equipes criadas, mas distribuir todos os jogadores dentro delas uniformemente!
-
-        if (!confirm('Todos os inscritos serão distribuídos nas 5 equipes de acordo com o gênero e cabeças de chave. Deseja prosseguir?')) {
-            return
-        }
-
-        setSalvando(true)
-        try {
-            // 1. Pegamos todos os inscritos
-            const titularesAtuais = titulares
-
-            // 2. Separar cabeças de chave e normais dentre TODOS
-            // Damos preferência em distribuir as mulheres uniformente primeiro
-            const mulheresTitulares = titularesAtuais.filter(j => j.genero === 'F')
-            const homensTitulares = titularesAtuais.filter(j => j.genero === 'M')
-
-            // Dentro de cada gênero, separamos cabeças de chave embaralhados e normais embaralhados
-            const cabecasM = mulheresTitulares.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const normaisM = mulheresTitulares.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const poolMulheres = [...cabecasM, ...normaisM]
-
-            const cabecasH = homensTitulares.filter(j => j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const normaisH = homensTitulares.filter(j => !j.cabeca_de_chave).sort(() => Math.random() - 0.5)
-            const poolHomens = [...cabecasH, ...normaisH]
-
-            // 3. Criar os 5 times
-            type NovoTime = {
-                nome: string
-                equipe_id: string
-                jogadores: Jogador[]
-                posicao: Posicao | ''
-                logo_url: string
-            }
-
-            const timesConfig = [
-                { nome: 'Tropa do Saque', logo_url: '/tropa_do_saque.png' },
-                { nome: 'Orai e Cortai', logo_url: '/orai_cortai.png' },
-                { nome: 'Bloqueio Divino', logo_url: '/bloqueio_divino.png' },
-                { nome: 'Muralha de Jericó', logo_url: '/muralha_de_jerico.png' },
-                { nome: 'Saque Santo', logo_url: '/saque_santo.png' }
-            ]
-
-            const novosTimes: NovoTime[] = []
-            for (let i = 0; i < 5; i++) {
-                novosTimes.push({
-                    nome: timesConfig[i].nome,
-                    equipe_id: crypto.randomUUID(), // Gerar ID UUID v4 manual para relacionar
-                    jogadores: [],
-                    posicao: '',
-                    logo_url: timesConfig[i]?.logo_url || ''
-                })
-            }
-
-            // 4. Distribuir iterativamente
-            // Primeiro espalhamos as mulheres (uma a cada time iterativamente)
-            let timeAtual = 0
-            poolMulheres.forEach(m => {
-                novosTimes[timeAtual].jogadores.push(m)
-                timeAtual = (timeAtual + 1) % 5
-            })
-
-            // Depois espalhamos os homens de onde paramos
-            poolHomens.forEach(h => {
-                novosTimes[timeAtual].jogadores.push(h)
-                timeAtual = (timeAtual + 1) % 5
-            })
-
-            // Shuffle posições T1 a T5
-            const posicoesEmbaralhadas = [...POSICOES].sort(() => Math.random() - 0.5)
-
-            // 4. Inserir equipes no banco e atualizar os jogadores
-            const posMap: Record<string, string> = {}
-
-            for (let i = 0; i < 5; i++) {
-                const time = novosTimes[i]
-                time.posicao = posicoesEmbaralhadas[i]
-                posMap[time.posicao as string] = time.equipe_id
-
-                // Inserir equipe
-                const { error: eqErr } = await supabase.from('equipes').insert({
-                    id: time.equipe_id,
-                    nome: time.nome,
-                    posicao: time.posicao,
-                    logo_url: time.logo_url
-                })
-                if (eqErr) throw eqErr
-
-                // Atualizar jogadores com o equipe_id
-                const pIds = time.jogadores.map(j => j.id)
-                // Se algum time não receber nenhum jogador, a query .in() poderia falhar no supabase
-                if (pIds.length > 0) {
-                    const { error: jErr } = await supabase
-                        .from('jogadores')
-                        .update({ equipe_id: time.equipe_id })
-                        .in('id', pIds)
-                    if (jErr) throw jErr
-                }
-            }
-
-            // 5. Preencher Jogos iniciais e garantir que todos os 9 slots existam na tabela
-            const jogosUpsert = [
-                { id: 1, rodada: 'abertura', tipo: 'vencedores', label: 'Jogo 1 · Abertura', equipe_a_id: posMap['T1'], equipe_b_id: posMap['T2'], status: 'aguardando' },
-                { id: 2, rodada: 'abertura', tipo: 'vencedores', label: 'Jogo 2 · Abertura', equipe_a_id: posMap['T3'], equipe_b_id: posMap['T4'], status: 'aguardando' },
-                { id: 3, rodada: 'segunda', tipo: 'vencedores', label: 'Jogo 3 · Chave Vencedores', equipe_a_id: null, equipe_b_id: posMap['T5'], status: 'aguardando' },
-                { id: 4, rodada: 'segunda', tipo: 'repescagem', label: 'Jogo 4 · Repescagem', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-                { id: 5, rodada: 'terceira', tipo: 'vencedores', label: 'Jogo 5 · Final Vencedores', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-                { id: 6, rodada: 'terceira', tipo: 'repescagem', label: 'Jogo 6 · Repescagem', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-                { id: 7, rodada: 'semifinal', tipo: 'semifinal', label: 'Jogo 7 · Semifinal', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-                { id: 8, rodada: 'final', tipo: 'final', label: 'Jogo 8 · Grande Final', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-                { id: 9, rodada: 'final', tipo: 'desempate', label: 'Jogo 9 · Desempate', equipe_a_id: null, equipe_b_id: null, status: 'aguardando' },
-            ]
-
-            const { error: jogosErr } = await supabase.from('jogos').upsert(jogosUpsert)
-            if (jogosErr) throw jogosErr
-
-            // 6. Ativar chaveamento e salvar fase no torneio_config
-            await supabase.from('torneio_config').upsert({
-                id: 1,
-                chaveamento_gerado: true,
-                fase_atual: 'abertura',
-            })
-
-            toast.success('🎉 Sorteio e Chaveamento concluídos!')
-            recarregarTorneio()
-            recarregarJogadores()
-        } catch (err: any) {
-            toast.error(err.message ?? 'Erro ao concluir sorteio')
-        } finally {
-            setSalvando(false)
-        }
-    }
+    // Inicializar lista de times ao carregar
+    const timesParaOrdenar = timesOrdenados.length > 0
+        ? timesOrdenados
+        : equipes.filter(e => e.misto_valido || equipes.length <= 8)
 
     const limparSorteio = async () => {
-        if (!confirm('Você tem certeza? Isso apagará todas as equipes formadas, os jogos e o chaveamento. Os jogadores voltarão para a lista de espera.')) {
-            return
-        }
+        if (!confirm('Isso apagará o chaveamento, jogos e vínculos de times. Os jogadores voltarão para a lista de espera.')) return
 
-        setSalvando(true)
         try {
-            // Volta configuração de chaveamento
             await supabase.from('torneio_config').upsert({
                 id: 1,
                 chaveamento_gerado: false,
-                fase_atual: null,
-                campeao_id: null
+                times_formados: false,
+                fase_atual: 'inscricoes',
+                campeao_id: null,
+                bracket_resumo_ia: null,
             })
-
-            // Limpa chave estrangeira dos jogadores (desvincular equipes)
             await supabase.from('jogadores').update({ equipe_id: null }).not('id', 'is', null)
-
-            // Apagar jogos e equipes
             await supabase.from('jogos').delete().not('id', 'is', null)
             await supabase.from('equipes').delete().not('id', 'is', null)
-
-            toast.success('Sorteio desfeito com sucesso! Você pode sortear novamente.')
-            recarregarTorneio()
-            recarregarJogadores()
-        } catch (err: any) {
-            toast.error(err.message ?? 'Erro ao desfazer sorteio')
-        } finally {
-            setSalvando(false)
+            toast.success('Sorteio desfeito!')
+            recarregar()
+            setBracket(null)
+            setTimesOrdenados([])
+        } catch (err: unknown) {
+            const error = err as Error
+            toast.error(error.message || 'Erro ao desfazer')
         }
+    }
+
+    const onDragEnd = (result: DropResult) => {
+        if (!result.destination) return
+        const base = timesParaOrdenar
+        const reordenado = Array.from(base)
+        const [removed] = reordenado.splice(result.source.index, 1)
+        reordenado.splice(result.destination.index, 0, removed)
+        setTimesOrdenados(reordenado)
+    }
+
+    const gerarComIA = async () => {
+        if (timesParaOrdenar.length < 2) {
+            toast.error('Nenhum time formado. Configure os times primeiro.')
+            return
+        }
+
+        setGerando(true)
+        setBracket(null)
+
+        try {
+            // Atualizar seeds dos times conforme a ordem atual
+            const updates = timesParaOrdenar.map((t, i) => ({ id: t.id, seed: i + 1 }))
+            for (const upd of updates) {
+                await supabase.from('equipes').update({ seed: upd.seed }).eq('id', upd.id)
+            }
+
+            // Montar lista com seeds atualizados
+            const timesComSeed: Equipe[] = timesParaOrdenar.map((t, i) => ({ ...t, seed: i + 1 }))
+
+            const resultado = await IAService.gerarTorneio(timesComSeed)
+            setBracket(resultado)
+            toast.success('🤖 Bracket gerado com sucesso!')
+        } catch (err: unknown) {
+            const error = err as Error
+            toast.error(`Erro na IA: ${error.message}`)
+        } finally {
+            setGerando(false)
+        }
+    }
+
+    const publicarChaveamento = async () => {
+        if (!bracket) return
+
+        // Validar novamente antes de salvar
+        const validacao = validarBracketIA(bracket, timesParaOrdenar)
+        if (!validacao.valido) {
+            toast.error(`Bracket inválido: ${validacao.erros.join('; ')}`)
+            return
+        }
+
+        setPublicando(true)
+        try {
+            // Salvar jogos no banco
+            await salvarBracket(bracket)
+
+            // Atualizar config
+            await supabase.from('torneio_config').upsert({
+                id: 1,
+                chaveamento_gerado: true,
+                fase_atual: 'em_andamento',
+                bracket_resumo_ia: bracket.resumo,
+                times_formados: true,
+            })
+
+            toast.success('🎉 Chaveamento publicado!')
+            recarregar()
+            setBracket(null)
+        } catch (err: unknown) {
+            const error = err as Error
+            toast.error(error.message || 'Erro ao publicar')
+        } finally {
+            setPublicando(false)
+        }
+    }
+
+    const chaveColors: Record<string, string> = {
+        vencedores: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        repescagem: 'bg-red-500/20 text-red-400 border-red-500/30',
+        semifinal: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        final: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+        decisivo: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     }
 
     return (
         <Layout config={config} showAdminNav>
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="font-syne text-2xl font-bold text-white">🎲 Sorteio e Equipes</h1>
+                    <h1 className="font-syne text-2xl font-bold text-white">🎲 Sorteio e Chaveamento</h1>
                     <p className="text-gray-500 text-sm mt-1">
-                        Gerencie os cabeças de chave. O sorteio distribuirá todos os {jogadores.length} inscritos nas equipes proporcionalmente, equilibrando H/M.
+                        Ordene os seeds dos times e gere o chaveamento com IA
                     </p>
                 </div>
-
-                {!config?.chaveamento_gerado ? (
-                    <button
-                        onClick={gerarSorteioEChaveamento}
-                        disabled={salvando || jogadores.length === 0}
-                        className="py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-bold rounded-xl transition-all text-sm shrink-0"
-                    >
-                        {salvando ? 'Processando...' : '🚀 Realizar Sorteio Automático'}
-                    </button>
-                ) : (
+                {config?.chaveamento_gerado && (
                     <button
                         onClick={limparSorteio}
-                        disabled={salvando}
-                        className="py-2 px-4 bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 border border-red-500/30 rounded-lg transition-all text-sm shrink-0"
+                        className="py-2 px-4 bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30 rounded-lg text-sm font-medium transition-all"
                     >
-                        {salvando ? 'Desfazendo...' : '❌ Desfazer Sorteio'}
+                        ❌ Desfazer Sorteio
                     </button>
                 )}
             </div>
 
-            {/* Avisos */}
             {config?.chaveamento_gerado && (
-                <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-400 flex justify-between items-center">
-                    <span>✅ O sorteio já foi realizado e as equipes foram distribuídas no chaveamento.</span>
+                <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-400">
+                    ✅ O chaveamento já foi gerado e publicado.
+                    {config.bracket_resumo_ia && (
+                        <p className="mt-2 text-gray-400">{config.bracket_resumo_ia}</p>
+                    )}
                 </div>
             )}
 
             {!config?.chaveamento_gerado && (
-                <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-400">
-                    ℹ️ Ao sortear, <strong>todos</strong> os {jogadores.length} inscritos serão divididos proporcionalmente nas equipes, equilibrando as estrelas e dividindo Homens e Mulheres igualmente de forma dinâmica.
-                </div>
-            )}
+                <>
+                    {/* Passo 1: Ordenar seeds */}
+                    <div className="bg-[#111827] border border-[#1e2d40] rounded-2xl p-6 mb-6">
+                        <h2 className="font-syne font-bold text-white mb-1">
+                            <span className="text-blue-400 mr-2">1.</span>Ordenar Seeds (drag-and-drop)
+                        </h2>
+                        <p className="text-gray-500 text-sm mb-4">
+                            O Seed 1 é o favoritado. Seed 1 vs último, Seed 2 vs penúltimo, etc.
+                        </p>
 
-            <div className="grid md:grid-cols-2 gap-6">
-                {/* HOMENS */}
-                <div className="bg-[#111827] rounded-2xl border border-[#1e2d40] p-6">
-                    <h2 className="font-syne text-xl font-bold text-white flex items-center gap-2 mb-4">
-                        👨 Homens <span className="text-sm font-normal text-gray-500">({homens.length})</span>
-                    </h2>
-                    <PlayerList
-                        players={homens}
-                        globalPlayers={jogadores}
-                        titularesIds={titularesIds}
-                        isLocked={!!config?.chaveamento_gerado}
-                        onToggleStar={toggleCabecaChave}
-                    />
-                </div>
-
-                {/* MULHERES */}
-                <div className="bg-[#111827] rounded-2xl border border-[#1e2d40] p-6">
-                    <h2 className="font-syne text-xl font-bold text-white flex items-center gap-2 mb-4">
-                        👩 Mulheres <span className="text-sm font-normal text-gray-500">({mulheres.length})</span>
-                    </h2>
-                    <PlayerList
-                        players={mulheres}
-                        globalPlayers={jogadores}
-                        titularesIds={titularesIds}
-                        isLocked={!!config?.chaveamento_gerado}
-                        onToggleStar={toggleCabecaChave}
-                    />
-                </div>
-            </div>
-        </Layout >
-    )
-}
-
-function PlayerList({
-    players,
-    globalPlayers,
-    titularesIds,
-    isLocked,
-    onToggleStar
-}: {
-    players: Jogador[],
-    globalPlayers: Jogador[],
-    titularesIds: Set<string>,
-    isLocked: boolean,
-    onToggleStar: (j: Jogador) => void
-}) {
-    if (players.length === 0) {
-        return <p className="text-gray-500 text-sm italic">Nenhum atleta inscrito.</p>
-    }
-
-    return (
-        <div className="space-y-2">
-            {players.map((j) => {
-                const globalIndex = globalPlayers.findIndex(globalP => globalP.id === j.id)
-                const isTitular = titularesIds.has(j.id)
-
-                return (
-                    <div
-                        key={j.id}
-                        className={`flex items-center justify-between p-3 rounded-xl border transition-colors
-                            ${isTitular ? 'bg-[#1f2937] border-[#374151]' : 'bg-[#0d1117] border-dashed border-[#1e2d40] opacity-80'}
-                        `}
-                    >
-                        <div className="flex flex-col">
-                            <span className={`font-semibold text-sm ${isTitular ? 'text-white' : 'text-gray-400'}`}>
-                                {globalIndex + 1}. {j.nome}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                                {j.equipe_id ? '✓ Em equipe' : 'No Sorteio'}
-                            </span>
-                        </div>
-
-                        <button
-                            disabled={isLocked}
-                            onClick={() => onToggleStar(j)}
-                            title={j.cabeca_de_chave ? "Remover de Cabeça de Chave" : "Marcar como Cabeça de Chave"}
-                            className={`p-2 rounded-lg transition-all ${j.cabeca_de_chave
-                                ? 'bg-[#f5a623]/20 text-[#f5a623]'
-                                : 'bg-gray-800 text-gray-600 hover:text-gray-400 hover:bg-gray-700'
-                                } ${isLocked ? 'cursor-default opacity-60' : ''}`}
-                        >
-                            ⭐
-                        </button>
+                        {timesParaOrdenar.length === 0 ? (
+                            <p className="text-gray-500 italic text-sm">
+                                Nenhum time encontrado. Configure e confirme os times primeiro.
+                            </p>
+                        ) : (
+                            <DragDropContext onDragEnd={onDragEnd}>
+                                <Droppable droppableId="seeds">
+                                    {(provided) => (
+                                        <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+                                            {timesParaOrdenar.map((time, idx) => (
+                                                <Draggable key={time.id} draggableId={time.id} index={idx}>
+                                                    {(prov, snap) => (
+                                                        <div
+                                                            ref={prov.innerRef}
+                                                            {...prov.draggableProps}
+                                                            {...prov.dragHandleProps}
+                                                            className={`flex items-center gap-4 p-3 rounded-xl border-2 transition-all cursor-grab ${snap.isDragging
+                                                                ? 'bg-blue-600 border-blue-500 text-white shadow-xl scale-105'
+                                                                : 'bg-[#1f2937] border-[#374151] text-white hover:border-blue-500/40'
+                                                                }`}
+                                                        >
+                                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${snap.isDragging ? 'bg-white/20' : 'bg-blue-600/20 text-blue-400'
+                                                                }`}>
+                                                                {idx + 1}
+                                                            </span>
+                                                            {time.logo_url ? (
+                                                                <img
+                                                                    src={time.logo_url}
+                                                                    alt={time.nome}
+                                                                    className="w-9 h-9 object-contain shrink-0"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center font-bold text-white text-sm shrink-0">
+                                                                    {time.nome[0]}
+                                                                </div>
+                                                            )}
+                                                            <span className="font-medium">{time.nome}</span>
+                                                            {time.misto_valido && (
+                                                                <span className="ml-auto text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                                                                    ✅ Misto
+                                                                </span>
+                                                            )}
+                                                            <span className="text-gray-500 text-xs ml-auto shrink-0">☰</span>
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </DragDropContext>
+                        )}
                     </div>
-                )
-            })}
-        </div>
+
+                    {/* Passo 2: Gerar com IA */}
+                    {timesParaOrdenar.length >= 2 && (
+                        <div className="bg-[#111827] border border-[#1e2d40] rounded-2xl p-6 mb-6">
+                            <h2 className="font-syne font-bold text-white mb-4">
+                                <span className="text-blue-400 mr-2">2.</span>Gerar Bracket com IA
+                            </h2>
+
+                            <button
+                                onClick={gerarComIA}
+                                disabled={gerando}
+                                className="py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white font-bold rounded-xl transition-all text-sm flex items-center gap-2"
+                            >
+                                {gerando ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        A IA está construindo a estrutura...
+                                    </>
+                                ) : '🤖 Gerar Torneio com IA'}
+                            </button>
+
+                            {gerando && (
+                                <p className="text-gray-500 text-sm mt-3 italic">
+                                    A IA está analisando os times e construindo o bracket de eliminatória dupla...
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Resultado da IA */}
+                    {bracket && (
+                        <div className="bg-[#111827] border border-green-500/30 rounded-2xl p-6 mb-6">
+                            <h2 className="font-syne font-bold text-white mb-4">✅ Bracket Gerado pela IA</h2>
+
+                            {bracket.resumo && (
+                                <div className="mb-4 bg-[#0d1117] rounded-xl p-4 text-sm text-gray-300 border border-[#1e2d40]">
+                                    <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">🤖 Resumo</p>
+                                    <p>{bracket.resumo}</p>
+                                </div>
+                            )}
+
+                            {/* Validações */}
+                            <div className="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {[
+                                    { label: 'Mín. 2 jogos', ok: bracket.validacoes?.todos_times_jogam_minimo_2 ?? true },
+                                    { label: 'Grande Final', ok: bracket.validacoes?.grande_final_correta ?? true },
+                                    { label: 'Sem ciclos', ok: bracket.validacoes?.nenhum_confronto_repetido_precocemente ?? true },
+                                    { label: `${bracket.total_jogos} jogos`, ok: true },
+                                ].map((v, i) => (
+                                    <div key={i} className={`rounded-xl p-3 text-sm text-center ${v.ok ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                                        <p className="text-lg">{v.ok ? '✅' : '❌'}</p>
+                                        <p className="text-xs">{v.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Lista de jogos */}
+                            <div className="space-y-2 mb-4 max-h-80 overflow-y-auto">
+                                {bracket.jogos.map(jogo => {
+                                    const timeA = timesParaOrdenar.find(t => t.id === jogo.time_a_id)
+                                    const timeB = timesParaOrdenar.find(t => t.id === jogo.time_b_id)
+                                    const corClass = chaveColors[jogo.chave as string] || 'bg-gray-700/20 text-gray-400 border-gray-500/30'
+
+                                    return (
+                                        <div key={jogo.numero_jogo} className={`flex items-center gap-3 px-3 py-2 rounded-xl border text-sm ${corClass}`}>
+                                            <span className="font-bold w-6 shrink-0">#{jogo.numero_jogo}</span>
+                                            <span className="text-xs uppercase tracking-widest shrink-0">{jogo.chave}</span>
+                                            {jogo.is_bye ? (
+                                                <span className="flex-1 italic opacity-70">
+                                                    {timeA?.nome || '?'} → BYE (avança direto)
+                                                </span>
+                                            ) : (
+                                                <span className="flex-1">
+                                                    {timeA?.nome || '?'} <span className="opacity-60">vs</span> {timeB?.nome || '?'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <button
+                                onClick={publicarChaveamento}
+                                disabled={publicando}
+                                className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                {publicando ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Publicando...
+                                    </>
+                                ) : '🏆 Confirmar e Publicar Chaveamento'}
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
+        </Layout>
     )
 }

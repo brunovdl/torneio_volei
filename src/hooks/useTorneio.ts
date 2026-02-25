@@ -4,11 +4,6 @@ import { fetchJogos, fetchEquipes } from '@/services/bracket'
 import toast from 'react-hot-toast'
 import type { Jogo, Equipe, TorneioConfig } from '@/types'
 
-/**
- * Hook central de dados do torneio com suporte a tempo real.
- * Assina canais Supabase Realtime para jogos, equipes e torneio_config.
- * Ao detectar mudança em jogos, exibe um toast informativo.
- */
 export function useTorneio() {
     const [jogos, setJogos] = useState<Jogo[]>([])
     const [equipes, setEquipes] = useState<Equipe[]>([])
@@ -28,16 +23,25 @@ export function useTorneio() {
             ])
             setJogos(j)
             setEquipes(e)
+
             if (c.data) {
                 setConfig(c.data as unknown as TorneioConfig)
             } else {
-                // Se a tabela acabou de subir e está vazia, o config deve ser nulo e criamos o registro dummy "silenciosamente"
-                supabase.from('torneio_config').upsert({ id: 1, chaveamento_gerado: false, fase_atual: null, campeao_id: null }).then()
+                // Criar registro padrão se não existir
+                await supabase.from('torneio_config').upsert({
+                    id: 1,
+                    chaveamento_gerado: false,
+                    ao_vivo: false,
+                    fase_atual: 'inscricoes',
+                    inscricoes_abertas: true,
+                    times_formados: false,
+                })
                 setConfig(null)
             }
-        } catch (err: any) {
-            console.error('Erro ao carregar dados:', err)
-            toast.error(`Erro ao carregar os dados: ${err.message || JSON.stringify(err)}`)
+        } catch (err: unknown) {
+            const error = err as Error
+            console.error('Erro ao carregar dados:', error)
+            toast.error(`Erro ao carregar os dados: ${error.message || 'Erro desconhecido'}`)
         } finally {
             setLoading(false)
         }
@@ -50,12 +54,11 @@ export function useTorneio() {
         const jogosChannel = supabase
             .channel('jogos-realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'jogos' }, (payload) => {
-                // Re-fetch para garantir dados com joins
                 carregarDados()
                 if (payload.eventType === 'UPDATE') {
                     const j = payload.new as Partial<Jogo>
-                    if (j.status === 'finalizado') {
-                        toast(`🏐 Resultado atualizado! Jogo ${j.id} finalizado.`, {
+                    if (j.status === 'finalizado' && j.vencedor_id) {
+                        toast(`🏐 Jogo ${j.id || j.numero_jogo} finalizado!`, {
                             icon: '🔔',
                             duration: 4000,
                         })
@@ -64,7 +67,7 @@ export function useTorneio() {
             })
             .subscribe()
 
-        // Realtime: config (ao_vivo, campeão)
+        // Realtime: config
         const configChannel = supabase
             .channel('config-realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'torneio_config' }, () => {
