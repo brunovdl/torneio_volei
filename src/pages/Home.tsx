@@ -281,6 +281,7 @@ export default function Home() {
                         <ul className="list-disc pl-5 space-y-2">
                             <li><strong className="text-white">Altura da Rede:</strong> 2,35 metros (altura mista).</li>
                             <li><strong className="text-white">Saque:</strong> Pode ser feito de qualquer lugar atrás da linha de fundo. A equipe deve respeitar o rodízio de quem saca.</li>
+                            <li><strong className="text-white">Rede Superior (Teto):</strong> Devido à rede de proteção no teto, caso o saque bata nela e caia na quadra adversária, <span className="font-bold text-blue-400">volta o saque</span>. Se bater nela e cair do próprio lado, é <span className="font-bold text-red-500">ponto adversário</span> (saque fora).</li>
                             <li><strong className="text-white">Toques na Bola:</strong> Cada equipe tem direito a, no máximo, 3 toques para passar a bola (o bloqueio não conta como toque).</li>
                             <li><strong className="text-white">Toque na Rede:</strong> É proibido encostar na rede durante a disputa de bola. Qualquer toque resulta em ponto para a equipe adversária.</li>
                             <li><strong className="text-white">Critério de Arbitragem:</strong> Como o foco é a inclusão e a diversão de quem está aprendendo a jogar, a arbitragem será flexível com infrações técnicas de areia (como "carregar" a bola no levantamento de toque), apitando apenas retenções muito claras.</li>
