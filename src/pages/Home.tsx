@@ -16,8 +16,7 @@ export default function Home() {
             <section className="text-center py-10 sm:py-16">
                 <p className="text-gray-500 text-xs tracking-widest uppercase mb-3">IEQ JD Portugal</p>
                 <h1 className="font-syne text-4xl sm:text-6xl font-extrabold text-white mb-4 leading-tight">
-                    1º Mini Torneio de<br />
-                    <span className="text-[#f5a623]">Vôlei de Areia</span>
+                    1º Mini Torneio de <span className="text-[#f5a623]">Vôlei de Areia</span>
                 </h1>
                 <p className="text-gray-400 max-w-md mx-auto mb-8 text-sm sm:text-base">
                     Eliminatória dupla · Times Ilimitados · Sorteio equilibrado dinâmico
@@ -58,7 +57,9 @@ export default function Home() {
                     />
                     <StatusCard
                         label="Fase Atual"
-                        value={config.fase_atual ? faseLabel(config.fase_atual) : '—'}
+                        value={jogadores.length >= 30 && config.fase_atual === 'inscricoes'
+                            ? 'Vagas Esgotadas'
+                            : (config.fase_atual ? faseLabel(config.fase_atual) : '—')}
                         icon="🎯"
                         color="purple"
                     />
@@ -333,6 +334,8 @@ function StatusCard({
 
 function faseLabel(fase: string): string {
     const labels: Record<string, string> = {
+        inscricoes: 'Inscrições',
+        vagas_esgotadas: 'Vagas Esgotadas',
         abertura: 'Rodada de Abertura',
         segunda: '2ª Rodada',
         terceira: '3ª Rodada',

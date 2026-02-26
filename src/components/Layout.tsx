@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useJogadores } from '@/hooks/useJogadores'
 import LiveBadge from './LiveBadge'
 import type { TorneioConfig } from '@/types'
 
@@ -13,6 +14,7 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
     const location = useLocation()
     const navigate = useNavigate()
     const { user, signOut } = useAuth()
+    const { jogadores } = useJogadores()
 
     const handleLogout = async () => {
         await signOut()
@@ -91,6 +93,45 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
                 </div>
             </header>
 
+            {/* Ticker Animado */}
+            <div className="bg-blue-600/10 border-b border-blue-500/20 py-2 overflow-hidden h-10 flex items-center">
+                <div className="animate-marquee whitespace-nowrap text-xs sm:text-sm font-bold tracking-wide flex items-center gap-12">
+                    <span className="inline-block">
+                        <span className="text-blue-400">🎯 FASE ATUAL:</span>{' '}
+                        <span className="text-white">
+                            {jogadores.length >= 30 && config?.fase_atual === 'inscricoes'
+                                ? 'Vagas Esgotadas'
+                                : (config?.fase_atual ? faseLabel(config.fase_atual) : 'Inscrições')}
+                        </span>
+                    </span>
+                    <span className="inline-block">
+                        <span className="text-blue-400">📅 DATA DO TORNEIO:</span>{' '}
+                        <span className="text-white">27/02/2026</span>
+                    </span>
+                    <span className="inline-block">
+                        <span className="text-blue-400">🕒 SORTEIO DOS TIMES:</span>{' '}
+                        <span className="text-white">13:00h</span>
+                    </span>
+                    <span className="inline-block">
+                        <span className="text-blue-400">🏐 PRIMEIRO JOGO:</span>{' '}
+                        <span className="text-white">20:20h (Chave Principal)</span>
+                    </span>
+                    {/* Repetição para loop infinito suave */}
+                    <span className="inline-block">
+                        <span className="text-blue-400">🎯 FASE ATUAL:</span>{' '}
+                        <span className="text-white">
+                            {jogadores.length >= 30 && config?.fase_atual === 'inscricoes'
+                                ? 'Vagas Esgotadas'
+                                : (config?.fase_atual ? faseLabel(config.fase_atual) : 'Inscrições')}
+                        </span>
+                    </span>
+                    <span className="inline-block">
+                        <span className="text-blue-400">📅 DATA DO TORNEIO:</span>{' '}
+                        <span className="text-white">27/02/2026</span>
+                    </span>
+                </div>
+            </div>
+
             {/* Main */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 {children}
@@ -103,4 +144,19 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
             </footer>
         </div>
     )
+}
+
+function faseLabel(fase: string): string {
+    const labels: Record<string, string> = {
+        inscricoes: 'Inscrições',
+        vagas_esgotadas: 'Vagas Esgotadas',
+        abertura: 'Rodada de Abertura',
+        segunda: '2ª Rodada',
+        terceira: '3ª Rodada',
+        semifinal: 'Semifinal',
+        grande_final: 'Grande Final',
+        desempate: 'Desempate',
+        encerrado: 'Encerrado 🏆',
+    }
+    return labels[fase] ?? fase
 }
