@@ -23,12 +23,12 @@ export default function Home() {
                     Eliminatória dupla · Times Ilimitados · Sorteio equilibrado dinâmico
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center">
-                    {config?.chaveamento_gerado ? (
+                    {config?.chaveamento_gerado || jogadores.length >= 30 ? (
                         <Link
-                            to="/chaveamento"
+                            to={config?.chaveamento_gerado ? "/chaveamento" : "/inscricao"}
                             className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all hover:scale-105 text-sm"
                         >
-                            🏆 Ver Chaveamento
+                            {config?.chaveamento_gerado ? '🏆 Ver Chaveamento' : '🚫 Inscrições Esgotadas'}
                         </Link>
                     ) : (
                         <Link

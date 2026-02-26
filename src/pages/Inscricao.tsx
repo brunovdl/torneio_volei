@@ -33,7 +33,12 @@ export default function Inscricao() {
         formState: { errors },
     } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-    const inscricoesEncerradas = config?.inscricoes_abertas === false || config?.chaveamento_gerado || false
+    const LIMITE_JOGADORES = 30
+    const inscricoesEncerradas =
+        config?.inscricoes_abertas === false ||
+        config?.chaveamento_gerado ||
+        jogadores.length >= LIMITE_JOGADORES ||
+        false
 
     const homens = useMemo(() => jogadores.filter(j => j.genero === 'M' || j.genero === 'masculino').length, [jogadores])
     const mulheres = useMemo(() => jogadores.filter(j => j.genero === 'F' || j.genero === 'feminino').length, [jogadores])
@@ -111,7 +116,9 @@ export default function Inscricao() {
                         <p className="text-gray-400 text-sm">
                             {config?.chaveamento_gerado
                                 ? 'O sorteio das equipes já foi realizado.'
-                                : 'O administrador fechou as inscrições.'}
+                                : jogadores.length >= 30
+                                    ? 'O limite máximo de 30 jogadores inscritos foi atingido.'
+                                    : 'O administrador fechou as inscrições.'}
                         </p>
                     </div>
                 ) : sucesso ? (
