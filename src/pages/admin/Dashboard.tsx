@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useTorneio } from '@/hooks/useTorneio'
+import { AdminService } from '@/services/admin.service'
 import Layout from '@/components/Layout'
 
 type Fase = 'inscricoes' | 'configuracao' | 'divisao_ia' | 'sorteio' | 'em_andamento' | 'encerrado' | string
@@ -144,6 +145,41 @@ export default function Dashboard() {
                         <p className="text-gray-500 text-xs mt-1">{link.desc}</p>
                     </Link>
                 ))}
+            </div>
+
+            {/* Área de Perigo */}
+            <div className="mt-12 bg-red-500/5 border border-red-500/20 rounded-2xl p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="font-syne font-bold text-red-400 flex items-center gap-2">
+                            <span>⚠️</span> Área de Perigo
+                        </h2>
+                        <p className="text-gray-500 text-xs mt-1">
+                            Ações irreversíveis que afetam todo o torneio.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={async () => {
+                            const confirmar = window.confirm(
+                                '⚠️ ATENÇÃO: Isso apagará todos os times, jogos e logs gerados. \n\nOs Jogadores inscritos serão MANTIDOS, mas voltarão ao estado "Sem Time". \n\nDeseja continuar?'
+                            )
+                            if (!confirmar) return
+
+                            const loading = toast.loading('Resetando torneio...')
+                            try {
+                                await AdminService.resetTorneio()
+                                toast.success('Torneio resetado com sucesso!', { id: loading })
+                                recarregar()
+                            } catch (err: any) {
+                                toast.error('Erro ao resetar: ' + err.message, { id: loading })
+                            }
+                        }}
+                        className="px-4 py-2 bg-red-600/10 hover:bg-red-600 border border-red-600/30 text-red-500 hover:text-white text-xs font-bold rounded-xl transition-all"
+                    >
+                        Zerar Torneio e Recomeçar
+                    </button>
+                </div>
             </div>
         </Layout>
     )

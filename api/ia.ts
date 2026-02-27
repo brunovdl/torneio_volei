@@ -16,8 +16,8 @@ const GROQ_BASE = 'https://api.groq.com/openai/v1'
 // - mixtral-8x7b-32768
 // - gemma2-9b-it
 // Nota: o ID "openai/gpt-oss-120b" é formato OpenRouter; no Groq use os IDs acima.
-const MODEL_PRIMARY = 'openai/gpt-oss-120b'   // altere se necessário
-const MODEL_FALLBACK = 'llama-3.3-70b-versatile' // usado a partir da 3ª tentativa
+const MODEL_PRIMARY = 'openai/gpt-oss-120b'
+const MODEL_FALLBACK = 'llama-3.3-70b-versatile' // fallback mais rápido
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Apenas POST

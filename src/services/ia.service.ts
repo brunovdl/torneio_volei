@@ -329,7 +329,9 @@ export const IAService = {
             return content
         }
 
-        // Em produção (Vercel): usa o proxy serverless /api/ia que guarda a chave no servidor
+        // Em produção ou se o Vite Key não estiver disponível: usa o proxy serverless /api/ia
+        // Nota: Em desenvolvimento local SEM Vercel CLI, o fetch('/api/ia') pode retornar 405 
+        // porque o Vite tenta servir um arquivo estático ou o index.html.
         const response = await fetch('/api/ia', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -338,6 +340,12 @@ export const IAService = {
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({ error: response.statusText })) as { error: string }
+
+            // Se for 405, provavelmente é o dev server sem proxy configurado
+            if (response.status === 405) {
+                throw new Error(`Erro 405: O servidor de desenvolvimento não encontrou a rota /api/ia. Se estiver local, verifique se VITE_GROQ_API_KEY está no seu .env ou use o Vercel CLI.`)
+            }
+
             throw new Error(err.error || `Erro HTTP ${response.status}`)
         }
 
