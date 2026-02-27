@@ -139,8 +139,8 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
 
             {/* Footer */}
             <footer className="border-t border-[#1e2d40] py-6 text-center text-sm text-gray-600 mt-8">
-                🏐 1º Torneio de Vôlei de Areia — IEQ JD Portugal &nbsp;·&nbsp;
-                <span>Eliminatória Dupla · 5 Times</span>
+                🏐 1º Mini Torneio de Vôlei — IEQ JD Portugal &nbsp;·&nbsp;
+                <span>Eliminatória Dupla</span>
             </footer>
         </div>
     )
