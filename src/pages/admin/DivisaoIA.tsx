@@ -29,6 +29,7 @@ export default function DivisaoIA() {
     const [carregandoIA, setCarregandoIA] = useState(false)
     const [confirmando, setConfirmando] = useState(false)
     const [geracaoFeita, setGeracaoFeita] = useState(false)
+    const [houveAlteracao, setHouveAlteracao] = useState(false)
 
     // Inicializar times a partir das equipes existentes e jogadores já vinculados
     useEffect(() => {
@@ -159,6 +160,7 @@ export default function DivisaoIA() {
 
         setTimes(newTimes)
         setListaEspera(newEspera)
+        setHouveAlteracao(true)
     }
 
     const todosTimesValidos = times.every(t => t.misto_valido)
@@ -201,16 +203,20 @@ export default function DivisaoIA() {
                     .in('id', listaEspera.map(j => j.id))
             }
 
-            await supabase.from('torneio_config').upsert({
-                id: 1,
-                times_formados: true,
-                fase_atual: 'sorteio',
-            })
+            const isFaseInicial = config?.fase_atual === 'inscricoes' || config?.fase_atual === 'configuracao' || config?.fase_atual === 'divisao_ia'
 
-            toast.success('✅ Times confirmados! Vá para Sorteio para gerar o chaveamento.')
+            await supabase.from('torneio_config').update({
+                times_formados: true,
+                ...(isFaseInicial ? { fase_atual: 'sorteio' } : {})
+            }).eq('id', 1)
+
+            toast.success('✅ Times salvos com sucesso!')
+            setHouveAlteracao(false)
             recarregarTorneio()
             recarregarJogadores()
-            navigate('/admin/sorteio')
+            if (isFaseInicial) {
+                navigate('/admin/sorteio')
+            }
         } catch (err: unknown) {
             const error = err as Error
             toast.error(error.message || 'Erro ao confirmar times')
@@ -396,7 +402,7 @@ export default function DivisaoIA() {
             </DragDropContext>
 
             {/* Botão confirmar */}
-            {geracaoFeita && (
+            {(geracaoFeita || houveAlteracao) && (
                 <div className="flex flex-col items-end gap-2">
                     {!todosTimesValidos && (
                         <p className="text-yellow-400 text-sm">
@@ -414,9 +420,9 @@ export default function DivisaoIA() {
                         {confirmando ? (
                             <>
                                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Confirmando...
+                                Salvando...
                             </>
-                        ) : '✅ Confirmar Times →'}
+                        ) : config?.times_formados ? '💾 Salvar Alterações' : '✅ Confirmar Times →'}
                     </button>
                 </div>
             )}
