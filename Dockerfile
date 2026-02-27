@@ -8,10 +8,12 @@ COPY . .
 # Aceitar chaves do painel (EasyPanel/Docker) no momento do build
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_GROQ_API_KEY
 
 # Passar como env para o npm run build jogar para dentro do javascript
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_GROQ_API_KEY=$VITE_GROQ_API_KEY
 
 RUN npm run build
 

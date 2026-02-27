@@ -341,9 +341,9 @@ export const IAService = {
         if (!response.ok) {
             const err = await response.json().catch(() => ({ error: response.statusText })) as { error: string }
 
-            // Se for 405, provavelmente é o dev server sem proxy configurado
+            // Se for 405, a rota /api/ia não existe no servidor (Nginx/EasyPanel)
             if (response.status === 405) {
-                throw new Error(`Erro 405: O servidor de desenvolvimento não encontrou a rota /api/ia. Se estiver local, verifique se VITE_GROQ_API_KEY está no seu .env ou use o Vercel CLI.`)
+                throw new Error(`Erro 405: A rota /api/ia não foi encontrada. No EasyPanel, certifique-se de adicionar VITE_GROQ_API_KEY nas variáveis de ambiente E nos Build Arguments do seu painel e refaça o deploy.`)
             }
 
             throw new Error(err.error || `Erro HTTP ${response.status}`)
