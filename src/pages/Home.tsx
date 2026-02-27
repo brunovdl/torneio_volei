@@ -336,6 +336,11 @@ function faseLabel(fase: string): string {
     const labels: Record<string, string> = {
         inscricoes: 'Inscrições',
         vagas_esgotadas: 'Vagas Esgotadas',
+        configuracao: 'Configuração',
+        divisao_ia: 'Aguardando Sorteio',
+        sorteio: 'Sorteio em Andamento',
+        geracao_ia: 'Gerando Chaveamento',
+        em_andamento: 'Em Andamento',
         abertura: 'Rodada de Abertura',
         segunda: '2ª Rodada',
         terceira: '3ª Rodada',
