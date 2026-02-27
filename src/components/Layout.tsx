@@ -110,7 +110,7 @@ export default function Layout({ children, config, showAdminNav = false }: Layou
                     </span>
                     <span className="inline-block">
                         <span className="text-blue-400"> 🕒SORTEIO DOS TIMES:</span>{' '}
-                        <span className="text-white">13:00h</span>
+                        <span className="text-white">Times Sorteados</span>
                     </span>
                     <span className="inline-block">
                         <span className="text-blue-400"> 🏐PRIMEIRO JOGO:</span>{' '}
